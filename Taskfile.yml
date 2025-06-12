@@ -1,0 +1,23 @@
+version: 3
+
+output: prefixed
+
+vars:
+
+tasks:
+  pre-commit:
+    deps: [install-precommit]
+    desc: execute pre-commit
+    summary: Execute all pre-commit hooks.
+    cmds:
+      - pre-commit run -a
+
+  install-precommit:
+    cmds:
+      - pip install pre-commit
+      - pre-commit install --install-hooks --hook-type pre-commit --hook-type commit-msg
+    status:
+      - command -v pre-commit
+      - test -f .git/hooks/commit-msg
+      - test -f .git/hooks/pre-commit
+    silent: true
