@@ -1,0 +1,74 @@
+default_stages:
+  - "commit"
+  - "manual"
+
+repos:
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.18.1
+    hooks:
+      - id: gitleaks
+        entry: gitleaks detect --redact
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+      # - id: check-merge-conflict
+      - id: check-yaml
+        entry: check-yaml --unsafe
+      - id: end-of-file-fixer
+      - id: forbid-submodules
+      # - id: no-commit-to-branch
+      - id: trailing-whitespace
+
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.38.0
+  #   hooks:
+  #     - id: markdownlint
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_tflint
+        args: ["--args=--config=__GIT_WORKING_DIR__/.tflint.hcl"]
+
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.1.53
+    hooks:
+      - id: checkov
+        entry: checkov --skip-path .github/ --quiet -d .
+
+  # Black: The Uncompromising Code Formatter
+  - repo: https://github.com/psf/black
+    rev: 23.10.1
+    hooks:
+      - id: black
+
+  # Flake8: Your Tool For Style Guide Enforcement
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+
+  # Bandit is a tool designed to find common security issues in Python code.
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        name: bandit
+        description: 'Bandit is a tool for finding common security issues in Python code'
+        entry: bandit -c .bandit.yml
+        language: python
+        types: [python]
+
+  # - repo: https://github.com/pycqa/isort
+  #   rev: 5.13.2
+  #   hooks:
+  #     - id: isort
+  #       args: ["--profile", "black", "--filter-files"]
