@@ -1,0 +1,22 @@
+[project]
+name = "producer"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Erik Green",email = "erikgreen@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "lorem (>=0.1.1,<0.2.0)"
+]
+
+[tool.poetry]
+packages = [{include = "producer", from = "src"}]
+
+[tool.poetry-plugin-lambda-build]
+package-artifact-path = "package.zip"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
