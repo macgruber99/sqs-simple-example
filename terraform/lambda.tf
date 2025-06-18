@@ -7,8 +7,25 @@ module "lambda_sqs_producer" {
   handler       = "producer/lambda_function.lambda_handler"
   runtime       = "python3.13"
 
-  source_path            = "../lambdas/producer/src/producer/"
+  create_package         = false
   local_existing_package = "../lambdas/producer/package.zip"
+
+  policy_statements = {
+    sms_parameter_store_access = {
+      actions = [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParameterHistory",
+        "ssm:DescribeParameters"
+     ]
+
+      resources = [
+        "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
+      ]
+    }
+  }
+
+  attach_policy_statements = true
 
   tags = var.tags
 }
