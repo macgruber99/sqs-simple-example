@@ -7,7 +7,7 @@ from datetime import timezone
 
 sqs = boto3.client('sqs')
 ssm = boto3.client('ssm')
-ssm_param_name = "/sqs-producer-consumer/queue-url"
+ssm_param_name = "/sqs-simple-example/queue-url"
 
 def get_ssm_parameter(param_name):
     """
