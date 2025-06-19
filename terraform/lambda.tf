@@ -23,6 +23,21 @@ module "lambda_sqs_producer" {
         "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
       ]
     }
+    
+    sqs_access = {
+      actions  = [
+        "sqs:SendMessage"
+      ]
+        
+      resources = [
+        format(
+          "arn:aws:sqs:%s:%s:%s",
+          var.aws_region,
+          data.aws_caller_identity.current.account_id,
+          var.project_name
+        )
+      ]
+    }
   }
 
   attach_policy_statements = true
