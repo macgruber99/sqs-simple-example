@@ -19,7 +19,6 @@ def get_ssm_parameter(param_name):
     try:
         response = ssm.get_parameter(
             Name=param_name,
-            #WithDecryption=True  # Set to True if the parameter is encrypted
         )
         return response['Parameter']['Value']
     except Exception as e:
@@ -32,7 +31,6 @@ def get_datetime():
     Returns the current date and time as a string in ISO 8601 format.
     """
 
-    #return datetime.datetime.now(datetime.timezone.utc).isoformat()
     return datetime.now(timezone.utc).isoformat()
 
 
