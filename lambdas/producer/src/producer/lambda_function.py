@@ -1,9 +1,11 @@
-import boto3
+# Python Standard Library imports
 import json
-import lorem
-
 from datetime import datetime
 from datetime import timezone
+
+# Third-party library imports
+import boto3
+import lorem
 
 sqs = boto3.client('sqs')
 ssm = boto3.client('ssm')

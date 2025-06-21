@@ -53,18 +53,6 @@ files = [
 ]
 
 [[package]]
-name = "lorem"
-version = "0.1.1"
-description = "Generator for random text that looks like Latin."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "lorem-0.1.1-py3-none-any.whl", hash = "sha256:c9c2914b5a772022417c398bd74b7bbd712e73ff029ba82720855e458f13ae42"},
-    {file = "lorem-0.1.1.tar.gz", hash = "sha256:785f4109a241fc2891e59705e85d065f6e6d3ed6ad91750a8cb54d4f3e59d934"},
-]
-
-[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
@@ -130,4 +118,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13"
-content-hash = "51707c9d029cc0fbee2a35d998761ccb179c57cb8f962dc7102cea9d7de4361e"
+content-hash = "66c7dac8d66480a6788ae1a274ed40360d40ef397167e4b2ffab8b362ac1741d"
