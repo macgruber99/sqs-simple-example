@@ -28,19 +28,60 @@ module "lambda_sqs_producer" {
       actions  = [
         "sqs:SendMessage"
       ]
-        
+
       resources = [
-        format(
-          "arn:aws:sqs:%s:%s:%s",
-          var.aws_region,
-          data.aws_caller_identity.current.account_id,
-          var.project_name
-        )
+        module.sqs.queue_arn
       ]
     }
   }
 
   attach_policy_statements = true
+
+  tags = var.tags
+}
+
+module "lambda_sqs_consumer" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "7.21.0"
+
+  function_name = "${var.project_name}-consumer"
+  description   = "A simple Lambda function SQS consumer"
+  handler       = "consumer/lambda_function.lambda_handler"
+  runtime       = "python3.13"
+
+  create_package         = false
+  local_existing_package = "../lambdas/consumer/package.zip"
+
+  policy_statements = {    
+    sqs_access = {
+      actions  = [
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:ReceiveMessage"
+      ]
+        
+      resources = [
+        module.sqs.queue_arn
+      ]
+    }
+  }
+
+  attach_policy_statements = true
+
+  event_source_mapping = {
+    sqs = {
+      event_source_arn        = module.sqs.queue_arn
+      function_response_types = ["ReportBatchItemFailures"]
+
+      scaling_config = {
+        maximum_concurrency = 20
+      }
+
+      metrics_config = {
+        metrics = ["EventCount"]
+      }
+    }
+  }
 
   tags = var.tags
 }
