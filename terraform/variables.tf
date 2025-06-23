@@ -10,10 +10,13 @@ variable "aws_region" {
   default     = "us-west-2"
 }
 
-variable "tags" {
+variable "additional_tags" {
   description = "A map of tags to assign to AWS resources."
   type        = map(string)
-  default     = {}
+
+  default = {
+    Owner = "Erik Green"
+  }
 }
 
 variable "visibility_timeout" {

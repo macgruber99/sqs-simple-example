@@ -6,5 +6,12 @@ module "sqs" {
   kms_master_key_id          = var.kms_master_key_id
   visibility_timeout_seconds = var.visibility_timeout
 
-  tags = var.tags
+  create_dlq = true
+  
+  redrive_policy = {
+    # since this is an example project, send to DLQ after 1 failure
+    maxReceiveCount = 1
+  }
+
+  tags = local.tags
 }

@@ -1,5 +1,7 @@
 # Python Standard Library imports
 import json
+import os
+
 from datetime import datetime
 from datetime import timezone
 
@@ -7,25 +9,7 @@ from datetime import timezone
 import boto3
 import lorem
 
-sqs = boto3.client('sqs')
-ssm = boto3.client('ssm')
-ssm_param_name = "/sqs-simple-example/queue-url"
-
-def get_ssm_parameter(param_name):
-    """
-    Fetches a parameter value from AWS SSM Parameter Store.
-
-    :param parameter_name: The name of the parameter to fetch.
-    :return: The value of the parameter.
-    """
-    try:
-        response = ssm.get_parameter(
-            Name=param_name,
-        )
-        return response['Parameter']['Value']
-    except Exception as e:
-        print(f"Error fetching parameter {param_name}: {e}")
-        raise
+from aws_lambda_powertools import Logger
 
 
 def get_datetime():
@@ -36,6 +20,22 @@ def get_datetime():
     return datetime.now(timezone.utc).isoformat()
 
 
+def get_ssm_parameter(param_name):
+    """
+    Fetches a parameter value from AWS SSM Parameter Store.
+
+    :param parameter_name: The name of the parameter to fetch.
+    :return: The value of the parameter.
+    """
+
+    ssm = boto3.client('ssm')
+    response = ssm.get_parameter(
+        Name=param_name,
+    )
+
+    return response['Parameter']['Value']
+
+
 def send_message_to_sqs(message_body, queue_url, message_attributes=None):
     """
     Sends a message to the specified SQS queue.
@@ -44,17 +44,15 @@ def send_message_to_sqs(message_body, queue_url, message_attributes=None):
     :param message_attributes: Optional dictionary of message attributes.
     :return: Response from the SQS send_message API call.
     """
-    try:
-        response = sqs.send_message(
-            QueueUrl=queue_url,
-            MessageBody=json.dumps(message_body),
-            MessageAttributes=message_attributes or {}
-        )
-        print(f"Message sent to SQS with ID: {response['MessageId']}")
-        return response
-    except Exception as e:
-        print(f"Failed to send message to SQS: {e}")
-        raise
+
+    sqs = boto3.client('sqs')
+    response = sqs.send_message(
+        QueueUrl=queue_url,
+        MessageBody=json.dumps(message_body),
+        MessageAttributes=message_attributes or {}
+    )
+
+    return response
 
 
 def lambda_handler(event, context):
@@ -65,10 +63,24 @@ def lambda_handler(event, context):
     :param context: The runtime information of the Lambda function.
     """
 
+    ssm_param_path = os.environ.get('SSM_PARAM_PATH')
+    logger = Logger()
+
     message = {
-        "name": lorem.sentence(),
+        "text": lorem.sentence(), # generate random text that looks like Latin
         "timestamp": get_datetime()
     }
 
-    queue_url = get_ssm_parameter(ssm_param_name)
-    send_message_to_sqs(message, queue_url)
+    # get the SQS queue URL from SSM Parameter Store
+    try:
+        queue_url = get_ssm_parameter(ssm_param_path)
+    except Exception as e:
+        logger.exception(f"Error fetching parameter {ssm_param_path}: {e}")
+        raise
+
+    # send the message to the SQS queue
+    try:
+        send_message_to_sqs(message, queue_url)
+    except Exception as e:
+        logger.exception(f"Error sending message to SQS queue {queue_url}: {e}")
+        raise

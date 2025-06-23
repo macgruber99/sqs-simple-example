@@ -11,3 +11,10 @@ Use the `poetry-plugin-lambda-build` plugin to build a new package by executing 
 ```bash
 poetry build-lambda
 ```
+
+## Invoking Producer Lambda Function
+
+
+```bash
+aws lambda invoke --function-name sqs-simple-example-producer sqs-simple-example-producer.out
+```
