@@ -3,7 +3,5 @@ terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 terraform/builds
 
-lambdas/producer/package.zip
-lambdas/producer/tests/__pycache__/
-lambdas/consumer/package.zip
-lambdas/consumer/tests/__pycache__/
+package.zip
+__pycache__/
