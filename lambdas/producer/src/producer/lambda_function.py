@@ -46,13 +46,11 @@ def send_message_to_sqs(message_body, queue_url, message_attributes=None):
     """
 
     sqs = boto3.client('sqs')
-    response = sqs.send_message(
+    sqs.send_message(
         QueueUrl=queue_url,
         MessageBody=json.dumps(message_body),
         MessageAttributes=message_attributes or {}
     )
-
-    return response
 
 
 def lambda_handler(event, context):
@@ -63,7 +61,6 @@ def lambda_handler(event, context):
     :param context: The runtime information of the Lambda function.
     """
 
-    ssm_param_path = os.environ.get('SSM_PARAM_PATH')
     logger = Logger()
 
     message = {
@@ -71,8 +68,17 @@ def lambda_handler(event, context):
         "timestamp": get_datetime()
     }
 
+    # Fetch SSM parameter path from environment variable
+    try:
+        logger.info("Fetching SSM parameter path from environment variable.")
+        ssm_param_path = os.environ.get('SSM_PARAM_PATH')
+    except KeyError as e:
+        logger.exception(f"Environment variable SSM_PARAM_PATH not set: {e}")
+        raise
+
     # get the SQS queue URL from SSM Parameter Store
     try:
+        logger.info(f"Fetching SQS queue URL from SSM parameter {ssm_param_path}.")
         queue_url = get_ssm_parameter(ssm_param_path)
     except Exception as e:
         logger.exception(f"Error fetching parameter {ssm_param_path}: {e}")
@@ -80,7 +86,15 @@ def lambda_handler(event, context):
 
     # send the message to the SQS queue
     try:
+        logger.info(f"Sending message to SQS queue '{queue_url}'.")
         send_message_to_sqs(message, queue_url)
     except Exception as e:
-        logger.exception(f"Error sending message to SQS queue {queue_url}: {e}")
+        logger.exception(f"Error sending message to SQS queue '{queue_url}': {e}")
         raise
+
+    logger.info("Done.")
+    
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Successfully processed SQS record(s).)')
+    }
