@@ -37,7 +37,11 @@ module "lambda_sqs_producer" {
 
   attach_policy_statements = true
 
-  tags = var.tags
+  environment_variables = {
+    SSM_PARAM_PATH = local.ssm_param_path_queue_url
+  }
+
+  tags = local.tags
 }
 
 module "lambda_sqs_consumer" {
@@ -52,7 +56,20 @@ module "lambda_sqs_consumer" {
   create_package         = false
   local_existing_package = "../lambdas/consumer/package.zip"
 
-  policy_statements = {    
+  policy_statements = {
+    sms_parameter_store_access = {
+      actions = [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParameterHistory",
+        "ssm:DescribeParameters"
+     ]
+
+      resources = [
+        "arn:aws:ssm:*:*:parameter/${var.project_name}/*"
+      ]
+    }
+
     sqs_access = {
       actions  = [
         "sqs:DeleteMessage",
@@ -83,5 +100,9 @@ module "lambda_sqs_consumer" {
     }
   }
 
-  tags = var.tags
+  environment_variables = {
+    SSM_PARAM_PATH = local.ssm_param_path_bucket_name
+  }
+
+  tags = local.tags
 }
