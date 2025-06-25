@@ -81,8 +81,8 @@
 # (optional) list included test IDs here, eg '[B101, B406]':
 tests:
 
-# (optional) list skipped test IDs here, eg '[B101, B406]':
-skips: []
+# skip B101:assert_used since pytest uses assert statements
+skips: [B101]
 
 # (optional) list of directories to exclude from tests
 exclude_dirs: []
