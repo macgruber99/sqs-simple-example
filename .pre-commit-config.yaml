@@ -39,7 +39,7 @@ repos:
         args: ["--args=--config=__GIT_WORKING_DIR__/.tflint.hcl"]
 
   - repo: https://github.com/bridgecrewio/checkov
-    rev: 3.1.53
+    rev: 3.2.445
     hooks:
       - id: checkov
         entry: checkov --skip-path .github/ --quiet -d .

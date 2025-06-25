@@ -1,4 +1,5 @@
 resource "aws_ssm_parameter" "queue_url" {
+  #checkov:skip=CKV2_AWS_34:parameter not sensitive, no need to encrypt
   name        = local.ssm_param_path_queue_url
   description = "The URL of the SQS queue"
   type        = "String"
@@ -8,6 +9,7 @@ resource "aws_ssm_parameter" "queue_url" {
 }
 
 resource "aws_ssm_parameter" "bucket_name" {
+  #checkov:skip=CKV2_AWS_34:parameter not sensitive, no need to encrypt
   name        = local.ssm_param_path_bucket_name
   description = "The name of the S3 bucket"
   type        = "String"

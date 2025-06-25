@@ -18,15 +18,15 @@ module "lambda_sqs_producer" {
         "ssm:GetParameters",
         "ssm:GetParameterHistory",
         "ssm:DescribeParameters"
-     ]
+      ]
 
       resources = [
         "arn:aws:ssm:*:*:parameter${local.ssm_param_path_queue_url}"
       ]
     }
-    
+
     sqs_access = {
-      actions  = [
+      actions = [
         "sqs:SendMessage"
       ]
 
@@ -70,7 +70,7 @@ module "lambda_sqs_consumer" {
         "ssm:GetParameters",
         "ssm:GetParameterHistory",
         "ssm:DescribeParameters"
-     ]
+      ]
 
       resources = [
         "arn:aws:ssm:*:*:parameter${local.ssm_param_path_bucket_name}"
@@ -78,26 +78,26 @@ module "lambda_sqs_consumer" {
     }
 
     sqs_access = {
-      actions  = [
+      actions = [
         "sqs:DeleteMessage",
         "sqs:GetQueueAttributes",
         "sqs:ReceiveMessage"
       ]
-        
+
       resources = [
         module.sqs.queue_arn
       ]
     }
 
     s3_access = {
-      actions  = [
+      actions = [
         "s3:PutObject",
         "s3:PutObjectAcl", // Optional, if you need to manage ACLs
-        "s3:ListBucket" 
+        "s3:ListBucket"
       ]
-        
+
       resources = [
-        "${module.s3_bucket.s3_bucket_arn}",
+        module.s3_bucket.s3_bucket_arn,
         "${module.s3_bucket.s3_bucket_arn}/*"
       ]
     }

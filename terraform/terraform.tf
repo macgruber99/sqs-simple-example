@@ -8,11 +8,11 @@ terraform {
     }
   }
 
-  backend "s3" {  
-    bucket       = "eriks-terraform-state"  
-    key          = "sqs-simple-example/terraform.tfstate"  
-    region       = "us-west-2"  
-    encrypt      = true  
-    use_lockfile = true  # S3 native locking
+  backend "s3" {
+    bucket       = "eriks-terraform-state"
+    key          = "sqs-simple-example/terraform.tfstate"
+    region       = "us-west-2"
+    encrypt      = true
+    use_lockfile = true # S3 native locking
   }
 }
