@@ -28,12 +28,12 @@ def get_ssm_parameter(param_name):
     :return: The value of the parameter.
     """
 
-    ssm = boto3.client('ssm')
+    ssm = boto3.client("ssm")
     response = ssm.get_parameter(
         Name=param_name,
     )
 
-    return response['Parameter']['Value']
+    return response["Parameter"]["Value"]
 
 
 def send_message_to_sqs(message_body, queue_url, message_attributes=None):
@@ -45,18 +45,18 @@ def send_message_to_sqs(message_body, queue_url, message_attributes=None):
     :return: Response from the SQS send_message API call.
     """
 
-    sqs = boto3.client('sqs')
+    sqs = boto3.client("sqs")
     sqs.send_message(
         QueueUrl=queue_url,
         MessageBody=json.dumps(message_body),
-        MessageAttributes=message_attributes or {}
+        MessageAttributes=message_attributes or {},
     )
 
 
 def lambda_handler(event, context):
     """
     AWS Lambda handler function to send a message to SQS.
-    
+
     :param event: The event data passed to the Lambda function.
     :param context: The runtime information of the Lambda function.
     """
@@ -64,14 +64,14 @@ def lambda_handler(event, context):
     logger = Logger()
 
     message = {
-        "text": lorem.sentence(), # generate random text that looks like Latin
-        "timestamp": get_datetime()
+        "text": lorem.sentence(),  # generate random text that looks like Latin
+        "timestamp": get_datetime(),
     }
 
     # Fetch SSM parameter path from environment variable
     try:
         logger.info("Fetching SSM parameter path from environment variable.")
-        ssm_param_path = os.environ.get('SSM_PARAM_PATH')
+        ssm_param_path = os.environ.get("SSM_PARAM_PATH")
     except KeyError as e:
         logger.exception(f"Environment variable SSM_PARAM_PATH not set: {e}")
         raise
@@ -93,8 +93,8 @@ def lambda_handler(event, context):
         raise
 
     logger.info("Done.")
-    
+
     return {
-        'statusCode': 200,
-        'body': json.dumps('Successfully processed SQS record(s).)')
+        "statusCode": 200,
+        "body": json.dumps("Successfully processed SQS record(s).)"),
     }

@@ -7,7 +7,7 @@ module "sqs" {
   visibility_timeout_seconds = var.visibility_timeout
 
   create_dlq = true
-  
+
   redrive_policy = {
     # since this is an example project, send to DLQ after 1 failure
     maxReceiveCount = 1
