@@ -68,20 +68,41 @@ def lambda_handler(event, context):
         "timestamp": get_datetime(),
     }
 
-    # Fetch SSM parameter path from environment variable
+    # get the S3 bucket name from SSM Parameter Store
     try:
-        logger.info("Fetching SSM parameter path from environment variable.")
-        ssm_param_path = os.environ.get("SSM_PARAM_PATH")
+        logger.info(
+            "Getting SSM Parameter Store path for S3 bucket from environment variable."
+        )
+        ssm_param_path_bucket = os.environ.get("SSM_PARAM_BUCKET")
+        logger.info("Fetching S3 bucket name from SSM Parameter Store.")
+        bucket_name = get_ssm_parameter(os.environ.get("SSM_PARAM_BUCKET"))
     except KeyError as e:
-        logger.exception(f"Environment variable SSM_PARAM_PATH not set: {e}")
+        logger.exception(f"Environment variable SSM_PARAM_BUCKET not set: {e}")
+        raise
+    except Exception as e:
+        logger.exception(f"Error fetching parameter {ssm_param_path_bucket}: {e}")
+        raise
+
+    # read from S3 bucket
+    try:
+        print(f"bucket name: {bucket_name}")
+    except Exception as e:
+        logger.exception(f"Error reading from S3 bucket {bucket_name}: {e}")
         raise
 
     # get the SQS queue URL from SSM Parameter Store
     try:
-        logger.info(f"Fetching SQS queue URL from SSM parameter {ssm_param_path}.")
-        queue_url = get_ssm_parameter(ssm_param_path)
+        logger.info(
+            "Getting SSM Parameter Store path for SQS queue URL from environment variable."
+        )
+        ssm_param_path_queue = os.environ.get("SSM_PARAM_QUEUE")
+        logger.info("Fetching SQS queue URL from SSM Parameter Store.")
+        queue_url = get_ssm_parameter(os.environ.get("SSM_PARAM_QUEUE"))
+    except KeyError as e:
+        logger.exception(f"Environment variable SSM_PARAM_QUEUE not set: {e}")
+        raise
     except Exception as e:
-        logger.exception(f"Error fetching parameter {ssm_param_path}: {e}")
+        logger.exception(f"Error fetching parameter {ssm_param_path_queue}: {e}")
         raise
 
     # send the message to the SQS queue

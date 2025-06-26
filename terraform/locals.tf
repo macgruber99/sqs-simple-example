@@ -1,6 +1,7 @@
 locals {
-  ssm_param_path_queue_url   = "/${var.project_name}/queue-url"
-  ssm_param_path_bucket_name = "/${var.project_name}/s3-bucket-name"
+  buckets = toset(["input", "output"])
+
+  ssm_param_path_queue_url = "/${var.project_name}/queue-url"
 
   # With merge(), if the same key is defined in both dictionaries, then the one
   # that is later in the argument sequence takes precedence.  Since the Project

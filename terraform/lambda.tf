@@ -15,13 +15,23 @@ module "lambda_sqs_producer" {
     sms_parameter_store_access = {
       actions = [
         "ssm:GetParameter",
-        "ssm:GetParameters",
-        "ssm:GetParameterHistory",
-        "ssm:DescribeParameters"
       ]
 
       resources = [
-        "arn:aws:ssm:*:*:parameter${local.ssm_param_path_queue_url}"
+        aws_ssm_parameter.queue_url.arn,
+        aws_ssm_parameter.bucket_name["input"].arn
+      ]
+    }
+
+    s3_access = {
+      actions = [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ]
+
+      resources = [
+        module.s3_bucket["input"].s3_bucket_arn,
+        "${module.s3_bucket["input"].s3_bucket_arn}/*"
       ]
     }
 
@@ -39,9 +49,10 @@ module "lambda_sqs_producer" {
   attach_policy_statements = true
 
   environment_variables = {
-    # The queue URL could also be put directly in the environment variable,
-    # but I'm using an SSM parameter to demonstrate how to use SSM parameters.
-    SSM_PARAM_PATH = local.ssm_param_path_queue_url
+    # The AWS resource identifiers themselves could be put in env vars, but
+    # here SSM parameters are used and parameter paths are put in env vars.
+    SSM_PARAM_QUEUE  = aws_ssm_parameter.queue_url.name
+    SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["input"].name
   }
 
   # Not keeping logs since this is just an example
@@ -67,13 +78,10 @@ module "lambda_sqs_consumer" {
     sms_parameter_store_access = {
       actions = [
         "ssm:GetParameter",
-        "ssm:GetParameters",
-        "ssm:GetParameterHistory",
-        "ssm:DescribeParameters"
       ]
 
       resources = [
-        "arn:aws:ssm:*:*:parameter${local.ssm_param_path_bucket_name}"
+        aws_ssm_parameter.bucket_name["output"].arn
       ]
     }
 
@@ -92,13 +100,12 @@ module "lambda_sqs_consumer" {
     s3_access = {
       actions = [
         "s3:PutObject",
-        "s3:PutObjectAcl", // Optional, if you need to manage ACLs
         "s3:ListBucket"
       ]
 
       resources = [
-        module.s3_bucket.s3_bucket_arn,
-        "${module.s3_bucket.s3_bucket_arn}/*"
+        module.s3_bucket["output"].s3_bucket_arn,
+        "${module.s3_bucket["output"].s3_bucket_arn}/*"
       ]
     }
   }
@@ -121,9 +128,9 @@ module "lambda_sqs_consumer" {
   }
 
   environment_variables = {
-    # The S3 bucket name could be put directly in the environment variable, but
-    # I'm using an SSM parameter to demonstrate how to use SSM parameters.
-    SSM_PARAM_PATH = local.ssm_param_path_bucket_name
+    # The AWS resource identifier itself could be put in the env var, but here
+    # an SSM parameter is used and the parameter path is put in the env var.
+    SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["output"].name
   }
 
   # Not keeping logs since this is just an example

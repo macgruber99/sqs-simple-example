@@ -1,8 +1,11 @@
+# create "input" and an "output" buckets
 module "s3_bucket" {
+  for_each = local.buckets
+
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "4.11.0"
 
-  bucket = var.project_name
+  bucket = "${var.project_name}-${each.key}"
 
   server_side_encryption_configuration = {
     rule = {

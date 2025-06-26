@@ -63,20 +63,19 @@ def lambda_handler(event, context):
 
     logger = Logger()
 
-    # Fetch SSM parameter path from environment variable
+    # get the S3 bucket name from SSM Parameter Store
     try:
-        logger.info("Fetching SSM parameter path from environment variable.")
-        ssm_param_path = os.environ.get("SSM_PARAM_PATH")
+        logger.info(
+            "Getting SSM Parameter Store path for S3 bucket from environment variable."
+        )
+        ssm_param_path_bucket = os.environ.get("SSM_PARAM_BUCKET")
+        logger.info("Fetching S3 bucket name from SSM Parameter Store.")
+        bucket_name = get_ssm_parameter(os.environ.get("SSM_PARAM_BUCKET"))
     except KeyError as e:
-        logger.exception(f"Environment variable SSM_PARAM_PATH not set: {e}")
+        logger.exception(f"Environment variable SSM_PARAM_BUCKET not set: {e}")
         raise
-
-    # Get S3 bucket name from SSM Parameter Store
-    try:
-        logger.info(f"Fetching S3 bucket name from SSM parameter {ssm_param_path}.")
-        bucket = get_ssm_parameter(ssm_param_path)
     except Exception as e:
-        logger.exception(f"Error fetching parameter {ssm_param_path}: {e}")
+        logger.exception(f"Error fetching parameter {ssm_param_path_bucket}: {e}")
         raise
 
     # Process each record in the event
@@ -90,12 +89,14 @@ def lambda_handler(event, context):
             raise
 
         try:
-            logger.info(f"Writing processed record to S3 bucket '{bucket}'.")
+            logger.info(f"Writing processed record to S3 bucket '{bucket_name}'.")
             write_obj_to_s3(
-                bucket, f"{processed_record['messageId']}.txt", processed_record["body"]
+                bucket_name,
+                f"{processed_record['messageId']}.txt",
+                processed_record["body"],
             )
         except Exception as e:
-            logger.exception(f"Error writing to S3 bucket '{bucket}': {e}")
+            logger.exception(f"Error writing to S3 bucket '{bucket_name}': {e}")
             raise
 
     logger.info("Done.")
