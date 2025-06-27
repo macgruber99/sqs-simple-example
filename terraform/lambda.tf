@@ -61,6 +61,14 @@ module "lambda_sqs_producer" {
   tags = local.tags
 }
 
+resource "aws_lambda_permission" "allow_bucket" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_sqs_producer.lambda_function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = module.s3_bucket["input"].s3_bucket_arn
+}
+
 module "lambda_sqs_consumer" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.21.0"

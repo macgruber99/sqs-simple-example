@@ -39,3 +39,16 @@ module "s3_bucket" {
 
   tags = local.tags
 }
+
+resource "aws_s3_bucket_notification" "trigger" {
+  bucket = module.s3_bucket["input"].s3_bucket_id
+
+  lambda_function {
+    lambda_function_arn = module.lambda_sqs_producer.lambda_function_arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [
+    aws_lambda_permission.allow_bucket
+  ]
+}
