@@ -10,7 +10,7 @@ import boto3
 import lorem
 
 
-def write_obj_to_s3(bucket_name, file_name, message):
+def write_obj_to_s3(bucket_name, file_name, content):
     """
     Writes content to a file in an S3 bucket.
 
@@ -21,7 +21,7 @@ def write_obj_to_s3(bucket_name, file_name, message):
     """
 
     client = boto3.client("s3")
-    client.put_object(Bucket=bucket_name, Key=file_name, Body=json.dumps(message))
+    client.put_object(Bucket=bucket_name, Key=file_name, Body=content)
 
 
 def main():
@@ -35,10 +35,7 @@ def main():
     first_word = sentence.split()[0]  # get the first word of the sentence
     s3_obj_key = f"{first_word}-{timestamp}.json"  # create a unique file name based on the timestamp
 
-    message = {
-        "text": sentence,
-        "timestamp": timestamp,
-    }
+    message = {"text": sentence, "timestamp": timestamp}
 
     # parse the command line arguments
     parser = argparse.ArgumentParser(description="Write a message to an S3 bucket.")

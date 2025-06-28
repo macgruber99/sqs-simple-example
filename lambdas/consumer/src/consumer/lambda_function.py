@@ -15,8 +15,8 @@ def get_ssm_parameter(param_name):
     """
     Fetches a parameter value from AWS SSM Parameter Store.
 
-    :param parameter_name: The name of the parameter to fetch.
-    :return: The value of the parameter.
+    :param param_name (str): The name of the parameter to fetch.
+    :return (str): The value of the parameter.
     """
 
     client = boto3.client("ssm")
@@ -25,28 +25,46 @@ def get_ssm_parameter(param_name):
     return response["Parameter"]["Value"]
 
 
-def process_record(record):
+def is_valid_json(json_string):
     """
-    Processes a single record from the event.
+    Checks if the provided string is a valid JSON.
 
-    :param record: A dictionary representing a single record.
-    :return: A dictionary with processed data.
+    :param json_string (str): The string to check.
+    :return (bool): True if the string is valid JSON, False otherwise.
     """
 
-    if record["body"] == config["special_error_string"]:
-        raise Exception("Found special error string—-raising an exception!")
+    try:
+        json.loads(json_string)
+    except ValueError:
+        return False
 
-    return {"messageId": record["messageId"], "body": record["body"]}
+    return True
+
+
+def process_message(msg):
+    """
+    Processes an SQS message.
+
+    :param msg (str): The body of an SQS message.
+    :return (str): A string containing the 'text' field of a JSON object.
+    """
+
+    json_obj = json.loads(msg)
+
+    if "text" not in json_obj.keys():
+        return None
+    else:
+        return json_obj["text"]
 
 
 def write_obj_to_s3(bucket_name, file_name, content):
     """
     Writes content to a file in an S3 bucket.
 
-    :param bucket_name: The name of the S3 bucket.
-    :param file_name: The name of the file to create in the bucket.
-    :param content: The content to write to the file.
-    :return: A dictionary with response data.
+    :param bucket_name (str): The name of the S3 bucket.
+    :param file_name (str): The name of the file to create in the bucket.
+    :param content (str): The content to write to the file.
+    :return (dict): The response data from the S3 API call.
     """
 
     client = boto3.client("s3")
@@ -57,11 +75,13 @@ def lambda_handler(event, context):
     """
     AWS Lambda handler function to send a message to SQS.
 
-    :param event: The event data passed to the Lambda function.
-    :param context: The runtime information of the Lambda function.
+    :param event (dict): The event data passed to the Lambda function.
+    :param context (dict): The runtime information of the Lambda function.
     """
 
+    # define some variables
     logger = Logger()
+    processed_records = 0
 
     # get the S3 bucket name from SSM Parameter Store
     try:
@@ -78,27 +98,58 @@ def lambda_handler(event, context):
         logger.exception(f"Error fetching parameter {ssm_param_path_bucket}: {e}")
         raise
 
-    # Process each record in the event
-    logger.info(f"Processing {len(event.get('Records', []))} record(s) from the event.")
     for record in event.get("Records", []):
+        logger.info(
+            f"Processing {len(event.get('Records', []))} record(s) from the event."
+        )
+        try:
+            logger.info(f"Processing record with message ID: {record['messageId']}.")
+        except KeyError as e:
+            logger.error(f"The record does not contain a 'messageId' key: {e}")
+            raise
+
+        try:
+            if not is_valid_json(record["body"]):
+                logger.error(
+                    f"Invalid JSON in record with messageId '{record['messageId']}'."
+                )
+                raise ValueError("Invalid JSON.")
+        except KeyError as e:
+            logger.error(f"The SQS record does not contain a 'body' key: {e}")
+            raise
+
         try:
             logger.info(f"Processing record with messageId '{record['messageId']}'.")
-            processed_record = process_record(record)
+            message = process_message(record["body"])
         except Exception as e:
             logger.exception(f"Error processing record: {e}")
             raise
 
+        if message is None:
+            logger.exception(
+                f"Message received from SQS did not contain 'text' field: {record['body']}"
+            )
+            raise ValueError("No text found.")
+        elif message == config["special_error_string"]:
+            logger.exception(
+                f"Found special string that generates an error: '{message}'"
+            )
+            raise ValueError("Found special error string.")
+
         try:
-            logger.info(f"Writing processed record to S3 bucket '{bucket_name}'.")
+            logger.info(f"Writing message to S3 bucket '{bucket_name}'.")
             write_obj_to_s3(
                 bucket_name,
-                f"{processed_record['messageId']}.txt",
-                processed_record["body"],
+                f"{record['messageId']}.txt",
+                message,
             )
         except Exception as e:
             logger.exception(f"Error writing to S3 bucket '{bucket_name}': {e}")
             raise
 
+        processed_records += 1
+
+    logger.info(f"{processed_records} record(s) processed.")
     logger.info("Done.")
 
     return {
