@@ -3,7 +3,7 @@ module "sqs" {
   version = "4.3.1"
 
   name                       = var.project_name
-  kms_master_key_id          = var.kms_master_key_id
+  kms_master_key_id          = "alias/aws/sqs"
   visibility_timeout_seconds = var.visibility_timeout
 
   create_dlq = true

@@ -25,8 +25,8 @@ variable "visibility_timeout" {
   default     = 900 # i.e. 15 minutes
 }
 
-variable "kms_master_key_id" {
-  description = "The KMS master key ID for server-side encryption of the SQS queue."
+variable "alerts_email" {
+  description = "Email address to receive alerts for the SQS queue."
   type        = string
-  default     = "alias/aws/sqs" # Default AWS managed key
+  default     = "erikgreen@gmail.com"
 }
