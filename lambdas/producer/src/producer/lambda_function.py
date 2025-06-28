@@ -10,13 +10,16 @@ import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 
+# local imports
+from producer.config import config
+
 
 def get_ssm_parameter(param_name):
     """
     Fetches a parameter value from AWS SSM Parameter Store.
 
-    :param parameter_name: The name of the parameter to fetch.
-    :return: The value of the parameter.
+    :param parameter_name (str): The name of the parameter to fetch.
+    :return (str): The value of the parameter.
     """
 
     ssm = boto3.client("ssm")
@@ -31,9 +34,9 @@ def is_valid_event_source(event, bucket_name):
     """
     Checks if the event source is valid for the given S3 bucket.
 
-    :param event: The event data to check.
-    :param bucket_name: The name of the S3 bucket.
-    :return: True if the event source is valid, False otherwise.
+    :param event (dict): The event data to check.
+    :param bucket_name (str): The name of the S3 bucket.
+    :return (bool): True if the event source is valid, False otherwise.
     """
 
     return (
@@ -48,9 +51,9 @@ def is_valid_obj_size(event, max_size):
     """
     Checks if the size of the S3 object in the event is within the specified limit.
 
-    :param event: The event data containing the S3 object.
-    :param max_size: The maximum allowed size of the S3 object in bytes.
-    :return: True if the object size is valid, False otherwise.
+    :param event (dict): The event data containing the S3 object.
+    :param max_size (int): The maximum allowed size of the S3 object in bytes.
+    :return (bool): True if the object size is valid, False otherwise.
     """
 
     return (
@@ -66,8 +69,8 @@ def is_valid_json(json_string):
     """
     Checks if the provided string is a valid JSON.
 
-    :param json_string: The string to check.
-    :return: True if the string is valid JSON, False otherwise.
+    :param json_string (str): The string to check.
+    :return (bool): True if the string is valid JSON, False otherwise.
     """
 
     try:
@@ -81,9 +84,9 @@ def read_from_s3(bucket_name, file_name):
     """
     Reads the content of a file from an S3 bucket.
 
-    :param bucket_name: The name of the S3 bucket.
-    :param file_name: The name of the file to read.
-    :return: The content of the file as a string.
+    :param bucket_name (str): The name of the S3 bucket.
+    :param file_name (str): The name of the file to read.
+    :return (dict): The content of the file as a string.
     """
 
     s3 = boto3.client("s3")
@@ -95,15 +98,16 @@ def send_message_to_sqs(message_body, queue_url, message_attributes=None):
     """
     Sends a message to the specified SQS queue.
 
-    :param message_body: The body of the message to send.
-    :param message_attributes: Optional dictionary of message attributes.
-    :return: Response from the SQS send_message API call.
+    :param message_body (str): The body of the message to send.
+    :param queue_url (str): The URL of the SQS queue.
+    :param message_attributes (dict): Optional dictionary of message attributes.
+    :return (dict): Response from the SQS send_message API call.
     """
 
     sqs = boto3.client("sqs")
     sqs.send_message(
         QueueUrl=queue_url,
-        MessageBody=json.dumps(message_body),
+        MessageBody=message_body,
         MessageAttributes=message_attributes or {},
     )
 
@@ -112,13 +116,13 @@ def lambda_handler(event, context):
     """
     AWS Lambda handler function to send a message to SQS.
 
-    :param event: The event data passed to the Lambda function.
-    :param context: The runtime information of the Lambda function.
+    :param event (dict): The event data passed to the Lambda function.
+    :param context (dict): The runtime information of the Lambda function.
     """
 
+    # define some variables
     logger = Logger()
-
-    max_obj_size = 262144  # 256 KB, max size for SQS message
+    max_obj_size = config["max_obj_size"]
 
     # get the S3 bucket name from SSM Parameter Store
     try:
@@ -169,6 +173,7 @@ def lambda_handler(event, context):
         logger.exception(f"Could not read object from S3 bucket:\n{e}")
         raise
 
+    # the s3 object content must be valid JSON
     if not is_valid_json(obj_value):
         logger.error(f"Content of object '{obj_value}' is not valid JSON.")
         raise ValueError("Object content is not valid JSON.")
