@@ -7,12 +7,13 @@ vars:
 tasks:
   pre-commit:
     deps: [install-precommit]
-    desc: execute pre-commit
+    desc: Execute pre-commit
     summary: Execute all pre-commit hooks.
     cmds:
       - pre-commit run -a
 
   install-precommit:
+    desc: Install pre-commit
     cmds:
       - pip install pre-commit
       - pre-commit install --install-hooks --hook-type pre-commit --hook-type commit-msg
@@ -21,3 +22,40 @@ tasks:
       - test -f .git/hooks/commit-msg
       - test -f .git/hooks/pre-commit
     silent: true
+
+  build-producer:
+    desc: Build producer Lambda package
+    summary: Build a ZIP archive package of the producer Lambda function.
+    cmds:
+      - poetry build-lambda
+    dir: lambdas/producer/
+
+  build-consumer:
+    desc: Build consumer Lambda package
+    summary: Build a ZIP archive package of the consumer Lambda function.
+    cmds:
+      - poetry build-lambda
+    dir: lambdas/consumer/
+
+  build:
+    desc: Build Lambda packages
+    summary: Build a ZIP archive package for each Lambda function.
+    cmds:
+      - task build-producer
+      - task build-consumer
+
+  plan:
+    deps: [build]
+    desc: Show planned deployment
+    summary: Executes a 'terraform plan' to show what resources would be deployed.
+    cmds:
+      - terraform apply -auto-approve
+    dir: terraform/
+
+  deploy:
+    deps: [build]
+    desc: Deploy resources
+    summary: Applies Terraform code to deploy Lambdas and other resources to AWS.
+    cmds:
+      - terraform apply -auto-approve
+    dir: terraform/
