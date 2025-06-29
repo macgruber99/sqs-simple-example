@@ -5,4 +5,4 @@ A simple example of how to implement Lambda functions for SQS producers and cons
 
 # Architecture
 
-[Architecture Diagram](img/architecture-diagram.png)
+![Architecture Diagram](img/architecture-diagram.png)
