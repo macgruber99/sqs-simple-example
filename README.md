@@ -16,9 +16,32 @@ A DLQ has been configured for the SQS queue.
 
 CloudWatch alarms are deployed to monitor the Lambda functions and SQS queues.
 
+## Go Task
+
+[Go Task](https://github.com/go-task/task) is used make the execution of routine commands easier.
+
+To see a list of what tasks have been configured, execute `task --summary`.  To see more detail for a particular task, execute `task <task_name> --summary`.  YOu can also have a look at the `Taskfile.yml` file to see even more detail.
+
+## Pre-commit
+
+[Pre-commit](https://pre-commit.com/) hooks have been configured for this repository.
+
+You can look at which hooks have been configured by examining the `.pre-commit-config.yaml` file.
+
+To install the pre-commit hooks run `task install-precommit`.  Once installed, the hooks will run whenever a `git commit` command is executed.
+
+Some of the hooks have their own configuration files:
+- [Gitleaks](https://github.com/gitleaks/gitleaks) has a [.gitleaks.toml](./.gitleaks.toml) file
+- [checkov](https://www.checkov.io/) has a [.checkov.yml](./.checkov.yml) file
+- [tflint](https://github.com/terraform-linters/tflint) has a [.tflint.hcl](./.tflint.hcl) file
+- [Bandit](https://bandit.readthedocs.io/en/latest/) has a [.bandit.yml](./.bandit.yml) file
+- [flake8](https://flake8.pycqa.org/en/latest/) has a [.flake8](./.flake8) file
+
 ## Poetry
 
-Poetry is used to manage Python dependencies for the Lambda functions.
+[Poetry](https://python-poetry.org/) is used to manage Python dependencies for the Lambda functions.
+
+To build a Poetry package (i.e. ZIP archive) for one of the Lambda functions, execute `task build-producer` or `task build-consumer`.  To build packages for both Lambda functions, execute `task build`
 
 ## Pytest
 
@@ -28,17 +51,11 @@ Pytests tests have been configured for the Lambdas.
 
 The AWS resources are deployed via Terraform.
 
+To run a plan to see what resources Terraform plans to deploy, execute `task plan`.  To deploy the AWS resources, execute `task deploy`.  Note: this will also build the Lambda function packages as they are required by the Lambda function Terraform resource.
+
 ## CI/CD
 
 TBD
-
-## Go Task
-
-Go Task tasks have been configured to handle the execution of routine commands.
-
-## Pre-commit
-
-Pre-commit hooks have been configured, but need to be installed before they take effect.
 
 ## Utility Scripts
 
