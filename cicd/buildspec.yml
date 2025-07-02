@@ -1,8 +1,5 @@
 version: 0.2
 
-env:
-  variables:
-
 phases:
   install:
       runtime-versions:
@@ -10,10 +7,12 @@ phases:
       commands:
         - # install Poetry
         - # install Terraform
+        - echo "install phase..."
 
   pre-build:
     commands:
       - # install Python packages via Poetry
+      - echo "pre-build phase..."
 
   build:
     commands:
