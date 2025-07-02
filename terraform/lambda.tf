@@ -6,7 +6,7 @@ module "lambda_sqs_producer" {
   description   = "A simple Lambda function SQS producer"
   handler       = "producer/lambda_function.lambda_handler"
   runtime       = "python3.13"
-  memory_size   = 256
+  memory_size   = var.lambda_memory
 
   create_package         = false
   local_existing_package = "../lambdas/producer/package.zip"
@@ -55,8 +55,7 @@ module "lambda_sqs_producer" {
     SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["input"].name
   }
 
-  # Not keeping logs since this is just an example
-  cloudwatch_logs_retention_in_days = 1
+  cloudwatch_logs_retention_in_days = var.lambda_logs_retention_days
 
   tags = local.tags
 }
@@ -77,7 +76,7 @@ module "lambda_sqs_consumer" {
   description   = "A simple Lambda function SQS consumer"
   handler       = "consumer/lambda_function.lambda_handler"
   runtime       = "python3.13"
-  memory_size   = 256
+  memory_size   = var.lambda_memory
 
   create_package         = false
   local_existing_package = "../lambdas/consumer/package.zip"
@@ -126,7 +125,7 @@ module "lambda_sqs_consumer" {
       function_response_types = ["ReportBatchItemFailures"]
 
       scaling_config = {
-        maximum_concurrency = 20
+        maximum_concurrency = var.sqs_max_lambda_invocations
       }
 
       metrics_config = {
@@ -141,8 +140,7 @@ module "lambda_sqs_consumer" {
     SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["output"].name
   }
 
-  # Not keeping logs since this is just an example
-  cloudwatch_logs_retention_in_days = 1
+  cloudwatch_logs_retention_in_days = var.lambda_logs_retention_days
 
   tags = local.tags
 }

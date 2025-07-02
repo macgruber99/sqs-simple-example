@@ -1,22 +1,17 @@
 resource "aws_codebuild_project" "sqs_simple_example" {
   name          = var.project_name
   description   = "Codebuild project for ${var.project_name}"
-  build_timeout = 10
+  build_timeout = var.codebuild_timeout
   service_role  = aws_iam_role.sqs_simple_example_codebuild.arn
 
   artifacts {
     type = "NO_ARTIFACTS"
   }
 
-  #   cache {
-  #     type     = "S3"
-  #     location = aws_s3_bucket.example.bucket
-  #   }
-
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:4.0"
-    type                        = "LINUX_CONTAINER"
+    compute_type                = var.codebuild_compute_type
+    image                       = var.codebuild_image
+    type                        = var.codebuild_env_type
     image_pull_credentials_type = "CODEBUILD"
   }
 
@@ -34,9 +29,9 @@ resource "aws_codebuild_project" "sqs_simple_example" {
 
   source {
     type            = "GITHUB"
-    location        = "https://github.com/macgruber99/sqs-simple-example.git"
+    location        = var.github_repo
     git_clone_depth = 1
-    buildspec       = "buildspec.yml"
+    buildspec       = var.buildspec_file
 
     git_submodules_config {
       fetch_submodules = true
@@ -50,7 +45,7 @@ resource "aws_codebuild_project" "sqs_simple_example" {
     # }
   }
 
-  source_version = "main"
+  source_version = var.github_source_version
 
   tags = local.tags
 }
@@ -67,7 +62,7 @@ resource "aws_codebuild_webhook" "sqs_simple_example_deploy" {
 
     filter {
       type    = "BASE_REF"
-      pattern = "main"
+      pattern = var.github_source_version
     }
   }
 }
