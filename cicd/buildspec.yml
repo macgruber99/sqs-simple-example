@@ -9,7 +9,7 @@ phases:
         - # install Terraform
         - echo "install phase..."
 
-  pre-build:
+  pre_build:
     commands:
       - # install Python packages via Poetry
       - echo "pre-build phase..."
