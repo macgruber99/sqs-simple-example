@@ -1,0 +1,23 @@
+version: 0.2
+
+env:
+  variables:
+
+phases:
+  install:
+      runtime-versions:
+        python: 3.13
+      commands:
+        - # install Poetry
+        - # install Terraform
+
+  pre-build:
+    commands:
+      - # install Python packages via Poetry
+
+  build:
+    commands:
+      - # run unit tests
+      - # package Lambda function
+      - # deploy
+      - echo "Hello World!"
