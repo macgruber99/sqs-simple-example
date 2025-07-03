@@ -90,7 +90,12 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
     actions = ["ssm:*Parameter*"]
 
     resources = [
-      aws_ssm_parameter.queue_url.arn
+      format(
+        "arn:aws:ssm:%s:%s:parameter/%s/*",
+        var.aws_region,
+        data.aws_caller_identity.current.account_id,
+        var.project_name
+      )
     ]
   }
 
@@ -121,6 +126,20 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
 
     resources = [
       data.aws_ssm_parameter.codeconnections_connection.value
+    ]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["sns:*"]
+
+    resources = [
+      format(
+        "arn:aws:sns:%s:%s:%s-*",
+        var.aws_region,
+        data.aws_caller_identity.current.account_id,
+        var.project_name
+      )
     ]
   }
 }
