@@ -50,7 +50,7 @@ resource "aws_codebuild_project" "sqs_simple_example" {
   tags = local.tags
 }
 
-resource "aws_codebuild_webhook" "sqs_simple_example_deploy" {
+resource "aws_codebuild_webhook" "sqs_simple_example" {
   project_name = aws_codebuild_project.sqs_simple_example.name
   build_type   = "BUILD"
 
