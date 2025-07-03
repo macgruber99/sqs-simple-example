@@ -25,8 +25,13 @@ phases:
   pre_build:
     commands:
       - # install Python packages via Poetry
-      - cd lambdas/producer/ && eval $(poetry env activate)
-      - poetry env list
+      - |
+        echo "Installing Lambda dependencies..."
+        for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
+        do
+          cd $lambda_dir && eval $(poetry env activate) && poetry install
+          poetry env list
+        done
 
   build:
     commands:
