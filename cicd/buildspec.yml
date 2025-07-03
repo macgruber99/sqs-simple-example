@@ -25,13 +25,20 @@ phases:
   pre_build:
     commands:
       - # install Python packages via Poetry
-      - |
-        echo "Installing Lambda dependencies..."
-        for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
-        do
-          cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && eval $(poetry env activate) && poetry install
-          poetry env list
-        done
+      # - |
+      #   echo "Installing Lambda dependencies..."
+      #   for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
+      #   do
+      #     cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && eval $(poetry env activate) && poetry install
+      #     poetry env list
+      #   done
+      - cd ${CODEBUILD_SRC_DIR}/lambdas/producer/
+      - eval $(poetry env activate)
+      - poetry install
+      - cd ${CODEBUILD_SRC_DIR}/lambdas/consumer/
+      - eval $(poetry env activate)
+      - poetry install
+      - cd ${CODEBUILD_SRC_DIR}/
 
   build:
     commands:
