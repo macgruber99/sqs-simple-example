@@ -34,6 +34,23 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
 
   statement {
     effect = "Allow"
+
+    actions = [
+      "s3:GetBucketAcl",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:PutObject"
+    ]
+
+    resources = [
+      data.aws_ssm_parameter.terraform_state_bucket_arn.value,
+      "${data.aws_ssm_parameter.terraform_state_bucket_arn.value}/${var.project_name}/*"
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
     actions = [
       "s3:PutObject",
       "s3:GetBucketAcl",
