@@ -12,11 +12,13 @@ phases:
           /root/.local/bin/poetry --version
         - |
           TF_VER=$(<terraform/.terraform-version)
+          cd /tmp
           curl -fsSL https://releases.hashicorp.com/terraform/${TF_VER}/terraform_${TF_VER}_linux_amd64.zip -o terraform.zip
-          ls -latr
           unzip terraform.zip
           chmod +x terraform
           mv terraform /usr/local/bin/
+          rm terraform.zip
+          cd $CODEBUILD_SRC_DIR
           terraform --version
 
   pre_build:
