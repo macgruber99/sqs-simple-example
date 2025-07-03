@@ -7,7 +7,7 @@ phases:
       commands:
         - |
           curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="/root/.local/bin:$PATH
+          export PATH="/root/.local/bin:$PATH"
           poetry --version
         - |
           TF_VER=$(<terraform/.terraform-version)
