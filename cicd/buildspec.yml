@@ -5,9 +5,9 @@ phases:
       runtime-versions:
         python: 3.13
       commands:
-        - # install Poetry
-        - # install Terraform
-        - echo "install phase..."
+        - pipx install poetry
+        - TF_ENV=$(<.terraform-version)
+        - echo $TF_ENV
 
   pre_build:
     commands:
