@@ -53,4 +53,5 @@ phases:
         do
           cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task build
         done
+      - task tf-init
       - task deploy
