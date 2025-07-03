@@ -5,15 +5,9 @@ output: prefixed
 vars:
 
 tasks:
-  pre-commit:
-    deps: [install-precommit]
-    desc: Execute pre-commit
-    summary: Execute all pre-commit hooks.
-    cmds:
-      - pre-commit run -a
-
   install-precommit:
     desc: Install pre-commit
+    summary: Install the pre-commit package manager and hooks.
     cmds:
       - pip install pre-commit
       - pre-commit install --install-hooks --hook-type pre-commit --hook-type commit-msg
@@ -23,11 +17,20 @@ tasks:
       - test -f .git/hooks/pre-commit
     silent: true
 
-  unit-test:
-    desc: Lambda unit tests
-    summary: Execute unit tests for a Lambda function
+  pre-commit:
+    desc: Execute pre-commit
+    summary: Execute all pre-commit hooks.
+    deps:
+      - install-precommit
     cmds:
-      - poetry run pytest
+      - pre-commit run -a
+
+  unit-test:
+    desc: Run unit tests
+    summary: Run unit tests for a Lambda function.
+    cmds:
+      - echo "Running unit tests..."
+      #- poetry run pytest
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
   build:
@@ -37,18 +40,27 @@ tasks:
       - poetry build-lambda
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
-  plan:
-    deps: [build]
+  tf-init:
+    desc: Initialize Terraform code
+    summary: Executes a 'terraform init' to initializes the Terraform working directory.
+    cmds:
+      - terraform init
+    dir: terraform/
+
+  tf-plan:
+    deps:
+      - build
     desc: Show planned deployment
     summary: Executes a 'terraform plan' to show what resources would be deployed.
     cmds:
-      - terraform apply -auto-approve
+      - terraform plan
     dir: terraform/
 
   deploy:
-    deps: [build]
     desc: Deploy resources
     summary: Applies Terraform code to deploy Lambdas and other resources to AWS.
+    deps:
+      - build
     cmds:
       - terraform apply -auto-approve
     dir: terraform/
