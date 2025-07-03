@@ -5,10 +5,16 @@ phases:
       runtime-versions:
         python: 3.13
       commands:
-        - curl -sSL https://install.python-poetry.org | python3 -
-        - /root/.local/bin/poetry --version
-        - TF_VER=$(<terraform/.terraform-version)
-        - echo $TF_VER
+        - |
+          curl -sSL https://install.python-poetry.org | python3 -
+          /root/.local/bin/poetry --version
+        - |
+          TF_VER=$(<terraform/.terraform-version)
+          curl -fsSL https://releases.hashicorp.com/terraform/${TF_VER}/terraform_${TF_VER}_linux_amd64.zip -o terraform.zip
+          unzip terraform.zip
+          chmod +x terraform
+          mv terraform /usr/local/bin/
+          terraform --version
 
   pre_build:
     commands:
@@ -21,3 +27,4 @@ phases:
       - # package Lambda function
       - # deploy
       - echo "Hello World!"
+      - ls -latr
