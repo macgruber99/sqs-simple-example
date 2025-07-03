@@ -46,6 +46,7 @@ phases:
       #   done
       # create packages for Lambda functions
       - cd ${CODEBUILD_SRC_DIR}
+      - poetry self add poetry-plugin-lambda-build
       - |
         echo "Creating packages for Lambda functions..."
         for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
