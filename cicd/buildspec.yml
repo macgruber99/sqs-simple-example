@@ -29,12 +29,25 @@ phases:
         echo "Installing Lambda dependencies..."
         for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
         do
+          # sounds like 'poetry install' activates the venv so no need to have that step in the command
           cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && eval $(poetry env activate) && poetry install
         done
 
   build:
     commands:
-      - # run unit tests
-      - # package Lambda function
-      - # deploy
-      - echo "build phase..."
+      - cd ${CODEBUILD_SRC_DIR}
+      # - |
+      #   echo "Executing Lambda function unit tests..."
+      #   for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
+      #   do
+      #     cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task unit-test
+      #   done
+      # create packages for Lambda functions
+      - cd ${CODEBUILD_SRC_DIR}
+      - |
+        echo "Creating packages for Lambda functions..."
+        for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
+        do
+          cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task build
+        done
+      - task deploy

@@ -23,26 +23,19 @@ tasks:
       - test -f .git/hooks/pre-commit
     silent: true
 
-  build-producer:
-    desc: Build producer Lambda package
-    summary: Build a ZIP archive package of the producer Lambda function.
+  unit-test:
+    desc: Lambda unit tests
+    summary: Execute unit tests for a Lambda function
     cmds:
-      - poetry build-lambda
-    dir: lambdas/producer/
-
-  build-consumer:
-    desc: Build consumer Lambda package
-    summary: Build a ZIP archive package of the consumer Lambda function.
-    cmds:
-      - poetry build-lambda
-    dir: lambdas/consumer/
+      - poetry run pytest
+    dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
   build:
     desc: Build Lambda packages
     summary: Build a ZIP archive package for each Lambda function.
     cmds:
-      - task build-producer
-      - task build-consumer
+      - poetry build-lambda
+    dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
   plan:
     deps: [build]
