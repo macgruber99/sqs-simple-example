@@ -21,6 +21,8 @@ phases:
           rm terraform.zip
           cd $CODEBUILD_SRC_DIR
         - terraform --version
+        # install Go Task
+        - pip install go-task-bin
 
   pre_build:
     commands:
