@@ -6,7 +6,7 @@ phases:
         python: 3.13
       commands:
         - curl -sSL https://install.python-poetry.org | python3 -
-        - which poetry
+        - /root/.local/bin/poetry --version
         - TF_ENV=$(<.terraform-version)
         - echo $TF_ENV
 
