@@ -5,10 +5,12 @@ phases:
       runtime-versions:
         python: 3.13
       commands:
+        # install Poetry
         - |
           curl -sSL https://install.python-poetry.org | python3 -
           export PATH="/root/.local/bin:$PATH"
-          poetry --version
+        - poetry --version
+        # install Terraform
         - |
           TF_VER=$(<terraform/.terraform-version)
           cd /tmp
@@ -18,13 +20,12 @@ phases:
           mv terraform /usr/local/bin/
           rm terraform.zip
           cd $CODEBUILD_SRC_DIR
-          terraform --version
+        - terraform --version
 
   pre_build:
     commands:
       - # install Python packages via Poetry
-      - echo "pre-build phase..."
-      - cd lambdas/producer/
+      - cd lambdas/producer/ && eval $(poetry env activate)
       - poetry env list
 
   build:
