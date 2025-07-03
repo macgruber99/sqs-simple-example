@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 data "aws_ssm_parameter" "codeconnections_connection" {
   name = "/core-infra/codeconnections-connection"
 }

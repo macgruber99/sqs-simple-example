@@ -26,10 +26,29 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
+      "logs:DescribeLogGroups",
       "logs:PutLogEvents",
     ]
 
     resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+    ]
+
+    resources = [
+      format(
+        "arn:aws:iam::%s:role/%s-*",
+        data.aws_caller_identity.current.account_id,
+        var.project_name
+      )
+    ]
   }
 
   statement {
@@ -52,16 +71,17 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
     effect = "Allow"
 
     actions = [
-      "s3:PutObject",
-      "s3:GetBucketAcl",
-      "s3:GetBucketLocation"
+      "s3:Get*",
+      "s3:List*",
+      "s3:Delete*",
+      "s3:Put*",
+      "s3:TagResource",
+      "s3:UntagResource",
     ]
 
     resources = [
       module.s3_bucket["input"].s3_bucket_arn,
-      module.s3_bucket["output"].s3_bucket_arn,
-      "${module.s3_bucket["input"].s3_bucket_arn}/*",
-      "${module.s3_bucket["output"].s3_bucket_arn}/*"
+      module.s3_bucket["output"].s3_bucket_arn
     ]
   }
 
@@ -71,6 +91,19 @@ data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
 
     resources = [
       aws_ssm_parameter.queue_url.arn
+    ]
+  }
+
+  statement {
+    effect  = "Allow"
+    actions = ["ssm:GetParameter"]
+
+    resources = [
+      format(
+        "arn:aws:ssm:%s:%s:parameter/core-infra/*",
+        var.aws_region,
+        data.aws_caller_identity.current.account_id
+      )
     ]
   }
 
