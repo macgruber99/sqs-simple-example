@@ -5,8 +5,6 @@ phases:
       runtime-versions:
         python: 3.13
       commands:
-        - which terraform || true
-        - ls -latr
         - |
           curl -sSL https://install.python-poetry.org | python3 -
           /root/.local/bin/poetry --version
@@ -25,15 +23,12 @@ phases:
     commands:
       - # install Python packages via Poetry
       - echo "pre-build phase..."
+      - cd lambdas/producer/
+      - poetry env list
 
   build:
     commands:
       - # run unit tests
       - # package Lambda function
       - # deploy
-      - echo "Hello World!"
-      - ls -latr
-
-  post_build:
-    commands:
-      - ls -latr
+      - echo "build phase..."
