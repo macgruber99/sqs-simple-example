@@ -37,21 +37,25 @@ phases:
 
   build:
     commands:
+      # run unit tests
       - cd ${CODEBUILD_SRC_DIR}
-      # - |
-      #   echo "Executing Lambda function unit tests..."
-      #   for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
-      #   do
-      #     cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task unit-test
-      #   done
+      - |
+        for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
+        do
+          echo "Executing unit tests for ${lambda_dir}..."
+          cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task unit-test
+        done
       # create packages for Lambda functions
       - cd ${CODEBUILD_SRC_DIR}
       - poetry self add poetry-plugin-lambda-build
       - |
-        echo "Creating packages for Lambda functions..."
         for lambda_dir in `find lambdas/ -type d -maxdepth 1 -print | tail -n +2`
         do
+          echo "Creating package for ${lambda_dir}..."
           cd ${CODEBUILD_SRC_DIR}/${lambda_dir} && task build
         done
+      # deploy resources
+      - cd ${CODEBUILD_SRC_DIR}
+      - echo "Deploying resources..."
       - task tf-init
       - task deploy
