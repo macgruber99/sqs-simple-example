@@ -1,0 +1,96 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"cloudwatch:ListTagsForResource",
+				"lambda:CreateEventSourceMapping",
+				"lambda:ListTags",
+				"logs:DescribeLogGroups",
+				"logs:ListTagsForResource",
+				"ssm:DescribeParameters",
+				"ssm:ListTagsForResource",
+				"sts:GetCallerIdentity"
+			],
+			"Resource": "*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"cloudwatch:DescribeAlarms",
+				"cloudwatch:PutMetricAlarm"
+			],
+			"Resource": "arn:aws:cloudwatch:${Region}:${Account}:alarm:${ProjectName}-*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "lambda:GetEventSourceMapping",
+			"Resource": "arn:aws:lambda:${Region}:${Account}:event-source-mapping:*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"lambda:AddPermission",
+				"lambda:CreateFunction",
+				"lambda:GetFunction",
+				"lambda:GetFunctionCodeSigningConfig",
+				"lambda:GetPolicy",
+				"lambda:ListVersionsByFunction"
+			],
+			"Resource": "arn:aws:lambda:${Region}:${Account}:function:${ProjectName}-*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"logs:CreateLogGroup",
+				"logs:PutRetentionPolicy"
+			],
+			"Resource": "arn:aws:logs:${Region}:${Account}:log-group:/aws/lambda/${ProjectName}-*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"s3:CreateBucket",
+				"s3:GetAccelerateConfiguration",
+				"s3:GetBucketAcl",
+				"s3:GetBucketCORS",
+				"s3:GetBucketLocation",
+				"s3:GetBucketLogging",
+				"s3:GetBucketNotification",
+				"s3:GetBucketObjectLockConfiguration",
+				"s3:GetBucketPolicy",
+				"s3:GetBucketPublicAccessBlock",
+				"s3:GetBucketRequestPayment",
+				"s3:GetBucketTagging",
+				"s3:GetBucketVersioning",
+				"s3:GetBucketWebsite",
+				"s3:GetEncryptionConfiguration",
+				"s3:GetLifecycleConfiguration",
+				"s3:GetReplicationConfiguration",
+				"s3:PutBucketNotification",
+				"s3:PutBucketPublicAccessBlock",
+				"s3:PutBucketTagging",
+				"s3:PutEncryptionConfiguration",
+				"s3:PutLifecycleConfiguration"
+			],
+			"Resource": "arn:aws:s3:::${ProjectName}-*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"sqs:CreateQueue",
+				"sqs:SetQueueAttributes"
+			],
+			"Resource": "arn:aws:sqs:${Region}:${Account}:${ProjectName}-*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"ssm:GetParameter",
+				"ssm:PutParameter"
+			],
+			"Resource": "arn:aws:ssm:${Region}:${Account}:parameter/${ProjectName}/*"
+		}
+	]
+}

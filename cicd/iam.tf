@@ -17,179 +17,18 @@ resource "aws_iam_role" "sqs_simple_example_codebuild" {
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role.json
 }
 
-data "aws_iam_policy_document" "codebuild_sqs_simple_example" {
-  #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
-  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrictable actions
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:Describe*",
-      "logs:List*",
-      "logs:PutLogEvents",
-    ]
-
-    resources = ["*"]
-  }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "cloudwatch:Get*",
-  #     "cloudwatch:Describe*",
-  #     "cloudwatch:List*",
-  #     "cloudwatch:*Alarm*",
-  #   ]
-
-  #   resources = ["*"]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "iam:List*"
-  #   ]
-
-  #   resources = ["*"]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "iam:Create*",
-  #     "iam:Get*"
-  #   ]
-
-  #   resources = ["*"]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "s3:GetBucketAcl",
-  #     "s3:GetBucketLocation",
-  #     "s3:GetObject",
-  #     "s3:PutObject"
-  #   ]
-
-  #   resources = [
-  #     data.aws_ssm_parameter.terraform_state_bucket_arn.value,
-  #     "${data.aws_ssm_parameter.terraform_state_bucket_arn.value}/${var.project_name}/*"
-  #   ]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "s3:Get*",
-  #     "s3:List*",
-  #     "s3:Delete*",
-  #     "s3:Put*",
-  #     "s3:TagResource",
-  #     "s3:UntagResource",
-  #   ]
-
-  #   resources = [
-  #     module.s3_bucket["input"].s3_bucket_arn,
-  #     module.s3_bucket["output"].s3_bucket_arn
-  #   ]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "ssm:Describe*",
-  #     "ssm:List*"
-  #   ]
-
-  #   resources = ["*"]
-  # }
-
-  # statement {
-  #   effect  = "Allow"
-  #   actions = ["ssm:*Parameter*"]
-
-  #   resources = [
-  #     format(
-  #       "arn:aws:ssm:%s:%s:parameter/%s/*",
-  #       var.aws_region,
-  #       data.aws_caller_identity.current.account_id,
-  #       var.project_name
-  #     )
-  #   ]
-  # }
-
-  # statement {
-  #   effect  = "Allow"
-  #   actions = ["ssm:GetParameter"]
-
-  #   resources = [
-  #     format(
-  #       "arn:aws:ssm:%s:%s:parameter/core-infra/*",
-  #       var.aws_region,
-  #       data.aws_caller_identity.current.account_id
-  #     )
-  #   ]
-  # }
-
-  # statement {
-  #   effect = "Allow"
-
-  #   actions = [
-  #     "codeconnections:GetConnection",
-  #     "codeconnections:GetConnectionToken",
-  #     "codeconnections:ListConnections",
-  #     "codeconnections:TagResource",
-  #     "codeconnections:UntagResource",
-  #     "codeconnections:UseConnection"
-  #   ]
-
-  #   resources = [
-  #     data.aws_ssm_parameter.codeconnections_connection.value
-  #   ]
-  # }
-
-  # statement {
-  #   effect  = "Allow"
-  #   actions = ["sns:*"]
-
-  #   resources = [
-  #     format(
-  #       "arn:aws:sns:%s:%s:%s-*",
-  #       var.aws_region,
-  #       data.aws_caller_identity.current.account_id,
-  #       var.project_name
-  #     )
-  #   ]
-  # }
-
-  # statement {
-  #   effect  = "Allow"
-  #   actions = ["sqs:*"]
-
-  #   resources = [
-  #     format(
-  #       "arn:aws:sqs:%s:%s:%s*",
-  #       var.aws_region,
-  #       data.aws_caller_identity.current.account_id,
-  #       var.project_name
-  #     )
-  #   ]
-  # }
-}
-
 resource "aws_iam_policy" "codebuild_sqs_simple_example" {
   name        = "${var.project_name}-codebuild-policy"
   description = "Policy for CodeBuild role for ${var.project_name} project"
-  policy      = data.aws_iam_policy_document.codebuild_sqs_simple_example.json
+
+  policy = templatefile(
+    "${path.module}/codebuild-policy.tftpl",
+    {
+      Account     = data.aws_caller_identity.current.account_id,
+      Region      = var.aws_region,
+      ProjectName = var.project_name
+    }
+  )
 }
 
 resource "aws_iam_role_policy_attachment" "codebuild_sqs_simple_example" {
