@@ -33,8 +33,8 @@ tasks:
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
   build:
-    desc: Build Lambda packages
-    summary: Build a ZIP archive package for each Lambda function.
+    desc: Build a Lambda packages
+    summary: Build a ZIP archive package for a Lambda function.
     cmds:
       - poetry build-lambda
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
@@ -58,8 +58,6 @@ tasks:
   deploy:
     desc: Deploy resources
     summary: Applies Terraform code to deploy Lambdas and other resources to AWS.
-    deps:
-      - build
     cmds:
       - terraform apply -auto-approve
     dir: terraform/
