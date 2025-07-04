@@ -5,9 +5,17 @@
 			"Effect": "Allow",
 			"Action": [
 				"cloudwatch:ListTagsForResource",
+				"codeconnections:GetConnection",
+				"codeconnections:GetConnectionToken",
+				"codeconnections:ListConnections",
+				"codeconnections:UseConnection",
+				"iam:Get*",
+				"iam:List*",
 				"lambda:CreateEventSourceMapping",
-				"lambda:ListTags",
+				"lambda:Get*",
+				"lambda:List*",
 				"logs:DescribeLogGroups",
+				"logs:DescribeLogStreams",
 				"logs:ListTagsForResource",
 				"ssm:DescribeParameters",
 				"ssm:ListTagsForResource",
@@ -18,6 +26,7 @@
 		{
 			"Effect": "Allow",
 			"Action": [
+				"cloudwatch:DeleteAlarms",
 				"cloudwatch:DescribeAlarms",
 				"cloudwatch:PutMetricAlarm"
 			],
@@ -25,18 +34,42 @@
 		},
 		{
 			"Effect": "Allow",
-			"Action": "lambda:GetEventSourceMapping",
+			"Action": [
+				"iam:*Policy*",
+				"iam:*Role*"
+			],
+			"Resource": [
+				"arn:aws:iam::${Account}:role/${ProjectName}-*",
+				"arn:aws:iam::${Account}:policy/${ProjectName}-*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"lambda:GetEventSourceMapping",
+				"lambda:TagResource",
+				"lambda:UntagResource"
+			],
 			"Resource": "arn:aws:lambda:${Region}:${Account}:event-source-mapping:*"
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
+				"lambda:AddLayerVersionPermission",
 				"lambda:AddPermission",
+				"lambda:CreateAlias",
 				"lambda:CreateFunction",
-				"lambda:GetFunction",
-				"lambda:GetFunctionCodeSigningConfig",
-				"lambda:GetPolicy",
-				"lambda:ListVersionsByFunction"
+				"lambda:DeleteAlias",
+				"lambda:DeleteFunction",
+				"lambda:DeleteFunctionConcurrency",
+				"lambda:Publish*",
+				"lambda:PutFunction*",
+				"lambda:RemoveLayerVersionPermission",
+				"lambda:RemovePermission",
+				"lambda:TagResource",
+				"lambda:UntagResource",
+				"lambda:UpdateAlias",
+				"lambda:UpdateFunction*"
 			],
 			"Resource": "arn:aws:lambda:${Region}:${Account}:function:${ProjectName}-*"
 		},
@@ -44,53 +77,76 @@
 			"Effect": "Allow",
 			"Action": [
 				"logs:CreateLogGroup",
-				"logs:PutRetentionPolicy"
+				"logs:CreateLogStream",
+				"logs:PutRetentionPolicy",
+				"logs:TagResource",
+				"logs:UntagResource"
 			],
-			"Resource": "arn:aws:logs:${Region}:${Account}:log-group:/aws/lambda/${ProjectName}-*"
+			"Resource": [
+				"arn:aws:logs:${Region}:${Account}:log-group:${ProjectName}-codebuild",
+				"arn:aws:logs:${Region}:${Account}:log-group:${ProjectName}-codebuild:*",
+				"arn:aws:logs:${Region}:${Account}:log-group:/aws/lambda/${ProjectName}-*",
+				"arn:aws:logs:${Region}:${Account}:log-group:/aws/lambda/${ProjectName}-*:*"
+			]
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
-				"s3:CreateBucket",
-				"s3:GetAccelerateConfiguration",
-				"s3:GetBucketAcl",
-				"s3:GetBucketCORS",
-				"s3:GetBucketLocation",
-				"s3:GetBucketLogging",
-				"s3:GetBucketNotification",
-				"s3:GetBucketObjectLockConfiguration",
-				"s3:GetBucketPolicy",
-				"s3:GetBucketPublicAccessBlock",
-				"s3:GetBucketRequestPayment",
-				"s3:GetBucketTagging",
-				"s3:GetBucketVersioning",
-				"s3:GetBucketWebsite",
-				"s3:GetEncryptionConfiguration",
-				"s3:GetLifecycleConfiguration",
-				"s3:GetReplicationConfiguration",
-				"s3:PutBucketNotification",
-				"s3:PutBucketPublicAccessBlock",
-				"s3:PutBucketTagging",
-				"s3:PutEncryptionConfiguration",
-				"s3:PutLifecycleConfiguration"
+				"logs:GetLogEvents",
+				"logs:PutLogEvents"
 			],
+			"Resource": [
+				"arn:aws:logs:${Region}:${Account}:log-group:${ProjectName}-codebuild",
+				"arn:aws:logs:${Region}:${Account}:log-group:${ProjectName}-codebuild:*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": "s3:*",
 			"Resource": "arn:aws:s3:::${ProjectName}-*"
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
-				"sqs:CreateQueue",
-				"sqs:SetQueueAttributes"
+				"s3:GetObject",
+				"s3:GetObjectAcl",
+				"s3:ListBucket",
+				"s3:PutObject"
 			],
-			"Resource": "arn:aws:sqs:${Region}:${Account}:${ProjectName}-*"
+			"Resource": [
+				"${TerraformStateBucket}",
+				"${TerraformStateBucket}/${ProjectName}/*",
+				"${CodeBuildLogsBucket}",
+				"${CodeBuildLogsBucket}/build-logs/${ProjectName}/*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": "s3:DeleteObject",
+			"Resource": "${TerraformStateBucket}/${ProjectName}/terraform.tfstate.tflock"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "sqs:*",
+			"Resource": "arn:aws:sqs:${Region}:${Account}:${ProjectName}*"
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
-				"ssm:GetParameter",
-				"ssm:PutParameter"
+				"ssm:*Parameter*",
+				"ssm:AddTagsToResource",
+				"ssm:DeleteResourcePolicy",
+				"ssm:GetResourcePolicies",
+				"ssm:List*",
+				"ssm:PutResourcePolicy",
+				"ssm:RemoveTagsFromResource"
 			],
 			"Resource": "arn:aws:ssm:${Region}:${Account}:parameter/${ProjectName}/*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": "sns:*",
+			"Resource": "arn:aws:sns:${Region}:${Account}:${ProjectName}-*"
 		}
 	]
 }

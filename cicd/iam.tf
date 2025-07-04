@@ -24,9 +24,11 @@ resource "aws_iam_policy" "codebuild_sqs_simple_example" {
   policy = templatefile(
     "${path.module}/codebuild-policy.tftpl",
     {
-      Account     = data.aws_caller_identity.current.account_id,
-      Region      = var.aws_region,
-      ProjectName = var.project_name
+      Account              = data.aws_caller_identity.current.account_id,
+      Region               = var.aws_region,
+      ProjectName          = var.project_name,
+      TerraformStateBucket = data.aws_ssm_parameter.terraform_state_bucket_arn.value
+      CodeBuildLogsBucket  = data.aws_ssm_parameter.codebuild_logs_bucket_arn.value
     }
   )
 }
