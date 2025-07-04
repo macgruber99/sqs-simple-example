@@ -1,10 +1,9 @@
-def test_get_datetime():
-    from datetime import datetime
-    from unittest.mock import patch
+def test_is_valid_event_source():
+    from src.producer.lambda_function import is_valid_event_source
+    from tests.events import events
 
-    with patch("datetime.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2025, 6, 24, 18, 30, 0)
-        # from mymodule import get_datetime
-        from src.producer.lambda_function import get_datetime
-
-        assert get_datetime() == "2025-06-24T18:30:00"
+    assert is_valid_event_source(events["valid_event"], "my-valid-test-bucket") is True
+    assert is_valid_event_source(events["valid_event"], "bad-bucket-name") is False
+    assert (
+        is_valid_event_source(events["invalid_event"], "my-valid-test-bucket") is False
+    )
