@@ -29,8 +29,7 @@ tasks:
     desc: Run unit tests
     summary: Run unit tests for a Lambda function.
     cmds:
-      - echo "Running unit tests..."
-      #- poetry run pytest
+      - poetry run pytest
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
   build:
