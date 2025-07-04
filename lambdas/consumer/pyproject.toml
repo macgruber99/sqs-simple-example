@@ -16,6 +16,12 @@ dependencies = [
 packages = [{include = "consumer", from = "src"}]
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+
+[tool.poetry-plugin-lambda-build]
+package-artifact-path = "package.zip"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
