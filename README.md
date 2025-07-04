@@ -41,11 +41,32 @@ Some of the hooks have their own configuration files:
 
 [Poetry](https://python-poetry.org/) is used to manage Python dependencies for the Lambda functions.
 
-To build a Poetry package (i.e. ZIP archive) for one of the Lambda functions, execute `task build-producer` or `task build-consumer`.  To build packages for both Lambda functions, execute `task build`
+### poetry-plugin-lambda-build
+
+The [poetry-plugin-lambda-build](https://pypi.org/project/poetry-plugin-lambda-build/) plugin allows you to easily create ZIP archives of your Lambda functions.
+
+To install the plugin for a particular Lambda function, execute the following:
+
+```bash
+cd lambdas/my-lambda/
+poetry self add poetry-plugin-lambda-build
+```
+
+To build a Poetry package (i.e. ZIP archive) for one of the Lambda functions, you can either run the command directly, or run a task:
+
+```bash
+# run the command directly
+cd lambdas/my-lambda/
+poetry build-lambda
+
+# run the task
+cd lambdas/my-lambda/
+task build
+```
 
 ## Pytest
 
-Pytests tests have been configured for the Lambdas.
+[Pytest](https://docs.pytest.org/en/stable/) tests have been configured for the Lambdas.
 
 ## Terraform
 
@@ -55,7 +76,7 @@ To run a plan to see what resources Terraform plans to deploy, execute `task pla
 
 ## CI/CD
 
-TBD
+Terraform code exists in the repo to deploy a CodeBuild project along with a webhook.  The [buildspec.yml](./cicd/buildspec.yml) file contains commands that will be run for each CodeBuild execution.
 
 ## Utility Scripts
 
