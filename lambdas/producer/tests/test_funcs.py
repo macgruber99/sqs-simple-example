@@ -1,18 +1,36 @@
-import boto3
+# Python Standard Library imports
 import pytest
+import os
 
 from unittest import TestCase
+from io import BytesIO
+
+# 3rd party imports
+import boto3
 from moto import mock_aws
 
+# local imports
+from src.producer.lambda_function import is_valid_event_source
+from src.producer.lambda_function import is_valid_json
+from src.producer.lambda_function import is_valid_obj_size
+from src.producer.lambda_function import get_ssm_parameter
+from src.producer.lambda_function import read_from_s3
+from src.producer.lambda_function import send_message_to_sqs
 from tests.events import events
 from src.producer.config import config
 
 
+@pytest.fixture(scope="function")
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"  # nosec
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"  # nosec
+    os.environ["AWS_SECURITY_TOKEN"] = "testing"  # nosec
+    os.environ["AWS_SESSION_TOKEN"] = "testing"  # nosec
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+
+
 def test_is_valid_event_source():
-    from src.producer.lambda_function import is_valid_event_source
-
-    # from tests.events import events
-
     assert is_valid_event_source(events["valid_event"], "my-valid-test-bucket") is True
     assert is_valid_event_source(events["valid_event"], "bad-bucket-name") is False
     assert (
@@ -21,8 +39,6 @@ def test_is_valid_event_source():
 
 
 def test_is_valid_json():
-    from src.producer.lambda_function import is_valid_json
-
     json_str = (
         '{"text": "veni vidi vici", "timestamp": "2025-07-05T21:25:07.407022+00:00"}'
     )
@@ -33,8 +49,6 @@ def test_is_valid_json():
 
 
 def test_is_valid_obj_size():
-    from src.producer.lambda_function import is_valid_obj_size
-
     assert is_valid_obj_size(events["valid_event"], config["max_obj_size"]) is True
     assert (
         is_valid_obj_size(events["obj_too_large_event"], config["max_obj_size"])
@@ -57,8 +71,6 @@ class TestGetSsmParameter(TestCase):
         )
 
     def test_get_ssm_parameter(self):
-        from src.producer.lambda_function import get_ssm_parameter
-
         # test a valid response
         resp = get_ssm_parameter(self.param_path)
         assert resp == self.param_value
@@ -66,3 +78,46 @@ class TestGetSsmParameter(TestCase):
         # test that exception is raised for bad SSM parameter path
         with pytest.raises(Exception):
             resp = get_ssm_parameter("blah")
+
+
+@mock_aws
+@pytest.mark.usefixtures("aws_credentials")
+class TestReadFromS3(TestCase):
+    def setUp(self):
+        self.bucket_name = "my-test-bucket"
+        self.bucket_obj_name = "my-json-msg"
+        self.json_str = '{"text": "veni vidi vici", "timestamp": "2025-07-05T21:25:07.407022+00:00"}'
+
+        # create S3 bucket and object
+        s3 = boto3.client("s3")
+        s3.create_bucket(Bucket=self.bucket_name)
+        bytes_file_obj = bytes(self.json_str, encoding="utf-8")
+        file_obj = BytesIO(bytes_file_obj)
+        s3.upload_fileobj(file_obj, self.bucket_name, self.bucket_obj_name)
+
+    def test_read_from_s3(self):
+        # test a valid response
+        resp = read_from_s3(self.bucket_name, self.bucket_obj_name)
+        assert resp == self.json_str
+
+
+@mock_aws
+class TestSendMessageToSqs(TestCase):
+    def setUp(self):
+        self.message_body = """
+          {
+            "text": "veni vidi vici",
+            "timestamp": "2025-07-05T21:25:07.407022+00:00"
+          }
+        """
+
+        # create S3 bucket and object
+        sqs = boto3.client("sqs", region_name="us-east-1")
+        queue = sqs.create_queue(QueueName="my-test-queue")
+        self.queue_url = queue["QueueUrl"]
+
+    def test_send_message_to_sqs(self):
+        # test a valid response
+        resp = send_message_to_sqs(self.message_body, self.queue_url)
+
+        assert resp is None
