@@ -18,6 +18,7 @@ packages = [{include = "producer", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
+moto = "^5.1.6"
 
 [tool.poetry-plugin-lambda-build]
 package-artifact-path = "package.zip"
