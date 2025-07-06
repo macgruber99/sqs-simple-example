@@ -4,10 +4,14 @@ import pytest
 from unittest import TestCase
 from moto import mock_aws
 
+from tests.events import events
+from src.producer.config import config
+
 
 def test_is_valid_event_source():
     from src.producer.lambda_function import is_valid_event_source
-    from tests.events import events
+
+    # from tests.events import events
 
     assert is_valid_event_source(events["valid_event"], "my-valid-test-bucket") is True
     assert is_valid_event_source(events["valid_event"], "bad-bucket-name") is False
@@ -26,6 +30,16 @@ def test_is_valid_json():
 
     assert is_valid_json(json_str) is True
     assert is_valid_json(non_json_str) is False
+
+
+def test_is_valid_obj_size():
+    from src.producer.lambda_function import is_valid_obj_size
+
+    assert is_valid_obj_size(events["valid_event"], config["max_obj_size"]) is True
+    assert (
+        is_valid_obj_size(events["obj_too_large_event"], config["max_obj_size"])
+        is False
+    )
 
 
 @mock_aws
