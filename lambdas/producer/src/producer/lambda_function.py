@@ -14,6 +14,22 @@ from aws_lambda_powertools import Logger
 from producer.config import config
 
 
+def read_env_var(env_var_name):
+    """
+    Returns the value of a given environment variable name.
+
+    :env_var_name (str): The name of the environment variable to read.
+    :return (str): The value of the environment variable.
+    """
+
+    env_var_value = os.environ.get(env_var_name)
+
+    if env_var_value is None:
+        raise ValueError("Environment variable not set.")
+    else:
+        return env_var_value
+
+
 def get_ssm_parameter(param_name):
     """
     Fetches a parameter value from AWS SSM Parameter Store.
@@ -36,15 +52,18 @@ def is_valid_event_source(event, bucket_name):
 
     :param event (dict): The event data to check.
     :param bucket_name (str): The name of the S3 bucket.
-    :return (bool): True if the event source is valid, False otherwise.
+    :return (None): Default 'None' returned if event source is correct S3 bucket.
     """
 
-    return (
+    # As of right now, S3 only sends one record per event so we can hard code
+    # that into the check below.
+    if not (
         "Records" in event
         and len(event["Records"]) > 0  # noqa: W503
         and "s3" in event["Records"][0]  # noqa: W503
-        and event["Records"][0]["s3"]["bucket"]["name"] == bucket_name  # noqa: W503
-    )
+        and event["Records"][0]["s3"]["bucket"]["name"] == bucket_name
+    ):  # noqa: W503
+        raise ValueError("invalid S3 source")
 
 
 def is_valid_obj_size(event, max_size):
@@ -53,31 +72,34 @@ def is_valid_obj_size(event, max_size):
 
     :param event (dict): The event data containing the S3 object.
     :param max_size (int): The maximum allowed size of the S3 object in bytes.
-    :return (bool): True if the object size is valid, False otherwise.
+    :return (None): Default 'None' returned if object size is valid.
     """
 
-    return (
+    if not (
         "Records" in event
         and len(event["Records"]) > 0  # noqa: W503
         and "s3" in event["Records"][0]  # noqa: W503
         and "object" in event["Records"][0]["s3"]  # noqa: W503
-        and event["Records"][0]["s3"]["object"]["size"] <= max_size  # noqa: W503
-    )
+        and event["Records"][0]["s3"]["object"]["size"] <= max_size
+    ):  # noqa: W503
+        raise ValueError("S3 object too large")
 
 
-def is_valid_json(json_string):
+def get_s3_obj_key(event):
     """
-    Checks if the provided string is a valid JSON.
+    Parse the S3 notification event for the object key (i.e. name).
 
-    :param json_string (str): The string to check.
-    :return (bool): True if the string is valid JSON, False otherwise.
+    :param event (dict): The S3 notification event.
+    :return (str): Return the S3 object key (i.e. name).
     """
 
-    try:
-        json.loads(json_string)
-        return True
-    except ValueError:
-        return False
+    obj_key = event["Records"][0]["s3"]["object"]["key"]
+    obj_key = unquote_plus(obj_key)  # decode URL-encoded key
+
+    if isinstance(obj_key, str) and obj_key:
+        return obj_key
+    else:
+        raise ValueError("'key' must be non-empty string")
 
 
 def read_from_s3(bucket_name, file_name):
@@ -92,6 +114,17 @@ def read_from_s3(bucket_name, file_name):
     s3 = boto3.client("s3")
     response = s3.get_object(Bucket=bucket_name, Key=file_name)
     return response["Body"].read().decode("utf-8")
+
+
+def is_valid_json(json_string):
+    """
+    Checks if the provided string is a valid JSON.
+
+    :param json_string (str): The string to check.
+    :return (None): True if the string is valid JSON, False otherwise.
+    """
+
+    json.loads(json_string)
 
 
 def send_message_to_sqs(message_body, queue_url, message_attributes=None):
@@ -124,38 +157,87 @@ def lambda_handler(event, context):
     logger = Logger()
     max_obj_size = config["max_obj_size"]
 
-    # get the S3 bucket name from SSM Parameter Store
+    # get SSM Parameter Store path for S3 bucket from env var
     try:
         logger.info(
             "Getting SSM Parameter Store path for S3 bucket from environment variable."
         )
-        ssm_param_path_bucket = os.environ.get("SSM_PARAM_BUCKET")
-        logger.info("Fetching S3 bucket name from SSM Parameter Store.")
-        bucket_name = get_ssm_parameter(os.environ.get("SSM_PARAM_BUCKET"))
-    except KeyError as e:
-        logger.exception(f"Environment variable SSM_PARAM_BUCKET not set: {e}")
+        ssm_param_path_bucket = read_env_var(
+            config["bucket_ssm_param_path_env_var_name"]
+        )
+    except ValueError as e:
+        logger.exception(
+            f'The {config["bucket_ssm_param_path_env_var_name"]} env var is not set: {e}'
+        )
         raise
     except Exception as e:
-        logger.exception(f"Could not fetch parameter {ssm_param_path_bucket}: {e}")
+        logger.exception(
+            f'Error reading environment variable {config["bucket_ssm_param_path_env_var_name"]}: {e}'
+        )
+        raise
+
+    # get S3 bucket name from SSM Parameter Store
+    try:
+        logger.info("Fetching S3 bucket name from SSM Parameter Store.")
+        bucket_name = get_ssm_parameter(ssm_param_path_bucket)
+    except KeyError as e:
+        logger.exception(
+            f"Parameter '{bucket_name}' does not exist in SSM Parameter Store: {e}"
+        )
+        raise
+    except Exception as e:
+        logger.exception(
+            f"Problem fetching parameter '{bucket_name}' from SSM Parameter Store: {e}"
+        )
         raise
 
     # validate that the event source bucket matches the expected bucket
-    if not is_valid_event_source(event, bucket_name):
+    try:
+        logger.info("Validating event source bucket matches expected bucket.")
+        is_valid_event_source(event, bucket_name)
+    except ValueError:
         logger.error(
             f"Expected event source to contain S3 bucket '{bucket_name}', but got event: {event}"
         )
-        raise ValueError("Invalid event source.")
+        raise
+    except Exception as e:
+        logger.exception(f"Problem validating S3 event source: {e}")
+        raise
 
-    if not is_valid_obj_size(event, max_obj_size):
-        logger.error(
-            f"Object size exceeds maximum allowed size of {max_obj_size} bytes."
+    # Validate S3 object size is not larger than SQS message size limit
+    try:
+        logger.info(
+            "Validating S3 object size is not larger than SQS message size limit."
         )
-        raise ValueError("Object size exceeds maximum allowed size.")
+        is_valid_obj_size(event, max_obj_size)
+    except ValueError as e:
+        logger.exception(
+            f"S3 Object size exceeds SQS maximum message size of {max_obj_size} bytes: {e}"
+        )
+        raise
+    except KeyError as e:
+        logger.exception(f"Could not access S3 object key: {e}")
+    except Exception as e:
+        logger.exception(f"Problem validating S3 object size: {e}")
+        raise
+
+    # get S3 object key (i.e. object name) from event
+    try:
+        logger.info("Getting S3 object key (i.e. object name) from event.")
+        obj_key = get_s3_obj_key(event)
+    except ValueError as e:
+        logger.exception(f"S3 object key not valid: {e}")
+    except KeyError:
+        logger.exception(
+            f"Malformed S3 notification event. Could not find 'key' in event: {event}"
+        )
+        raise
+    except Exception as e:
+        logger.exception(f"Problem getting S3 object key from event: {e}")
+        raise
 
     # read object from S3 bucket
     try:
-        obj_key = event["Records"][0]["s3"]["object"]["key"]
-        obj_key = unquote_plus(obj_key)  # decode URL-encoded key
         logger.info(f"Reading object '{obj_key}' from S3 bucket '{bucket_name}'.")
         obj_value = read_from_s3(bucket_name, obj_key)
     except KeyError as e:
@@ -163,7 +245,9 @@ def lambda_handler(event, context):
         raise
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
-            logger.exception(f"S3 object key '{obj_key}' not found: {e}")
+            logger.exception(
+                f"S3 object key '{obj_key}' not found in bucket '{bucket_name}': {e}"
+            )
             raise
         else:
             # Handle other potential ClientErrors
@@ -173,24 +257,44 @@ def lambda_handler(event, context):
         logger.exception(f"Could not read object from S3 bucket:\n{e}")
         raise
 
-    # the s3 object content must be valid JSON
-    if not is_valid_json(obj_value):
-        logger.error(f"Content of object '{obj_value}' is not valid JSON.")
-        raise ValueError("Object content is not valid JSON.")
+    # the S3 object content must be valid JSON
+    try:
+        logger.info("Validating S3 object content is valid JSON.")
+        is_valid_json(obj_value)
+    except Exception as e:
+        logger.exception(f"Problem converting S3 object content to JSON object: {e}")
+        raise
 
-    # get the SQS queue URL from SSM Parameter Store
+    # get SSM Parameter Store path for SQS queue URL from env var
     try:
         logger.info(
             "Getting SSM Parameter Store path for SQS queue URL from environment variable."
         )
-        ssm_param_path_queue = os.environ.get("SSM_PARAM_QUEUE")
-        logger.info("Fetching SQS queue URL from SSM Parameter Store.")
-        queue_url = get_ssm_parameter(os.environ.get("SSM_PARAM_QUEUE"))
-    except KeyError as e:
-        logger.exception(f"Environment variable SSM_PARAM_QUEUE not set: {e}")
+        ssm_param_path_queue = read_env_var(config["queue_ssm_param_path_env_var_name"])
+    except ValueError as e:
+        logger.exception(
+            f'The {config["queue_ssm_param_path_env_var_name"]} env var is not set: {e}'
+        )
         raise
     except Exception as e:
-        logger.exception(f"Could not fetch parameter {ssm_param_path_queue}: {e}")
+        logger.exception(
+            f'Error reading environment variable {config["queue_ssm_param_path_env_var_name"]}: {e}'
+        )
+        raise
+
+    # get the SQS queue URL from SSM Parameter Store
+    try:
+        logger.info("Getting SQS queue URL from SSM Parameter Store.")
+        queue_url = get_ssm_parameter(ssm_param_path_queue)
+    except KeyError as e:
+        logger.exception(
+            f"Parameter '{queue_url}' does not exist in SSM Parameter Store: {e}"
+        )
+        raise
+    except Exception as e:
+        logger.exception(
+            f"Problem fetching parameter '{queue_url}' from SSM Parameter Store: {e}"
+        )
         raise
 
     # send a message to the SQS queue
