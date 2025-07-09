@@ -1,5 +1,6 @@
 import json
 
+# valid SQS event JSON with valid message body
 valid_sqs_msg_body = json.loads(
     """
 {
@@ -32,6 +33,7 @@ valid_sqs_msg_body = json.loads(
 """
 )
 
+# valid SQS event JSON with invalid message body
 invalid_sqs_msg_body = json.loads(
     """
 {
@@ -80,7 +82,17 @@ invalid_sqs_msg_body = json.loads(
 """
 )
 
+# invalid SQS event JSON
+invalid_event = json.loads(
+    """
+{
+    "blah": "blah, blah, blah"
+}
+"""
+)
+
 events = {
     "valid_sqs_msg_body": valid_sqs_msg_body,
     "invalid_sqs_msg_body": invalid_sqs_msg_body,
+    "invalid_event": invalid_event,
 }
