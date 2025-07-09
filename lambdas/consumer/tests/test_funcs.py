@@ -32,29 +32,6 @@ def aws_credentials():
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
-def test_verify_event():
-    good_event = events["valid_sqs_msg_body"]
-    bad_event = events["invalid_event"]
-
-    assert verify_event(good_event) is None
-
-    # if an invalid SQS event is passed to the function, it should raise an error
-    with pytest.raises(Exception):
-        verify_event(bad_event)
-
-
-def test_verify_sqs_record():
-    good_event = events["valid_sqs_msg_body"]
-    bad_event = events["invalid_sqs_msg_body"]
-
-    for record in good_event["Records"]:
-        assert verify_sqs_record(record) is None
-
-    # if an invalid SQS record is passed to the function, it should raise an error
-    with pytest.raises(Exception):
-        verify_sqs_record(bad_event)
-
-
 @pytest.mark.usefixtures("aws_credentials")
 def test_read_env_var():
     # use AWS_DEFAULT_REGION env var set in aws_credentials() for testing
@@ -63,17 +40,6 @@ def test_read_env_var():
     # if an env var that is not set is passed to the function, it should raise an error
     with pytest.raises(Exception):
         read_env_var("my_non_existent_env_var")
-
-
-def test_is_valid_json():
-    valid_json = '{"name": "James Bond"}'
-    invalid_json = "blah, blah, blah"
-
-    assert is_valid_json(valid_json) is None
-
-    # if an env var that is not set is passed to the function, it should raise an error
-    with pytest.raises(Exception):
-        is_valid_json(invalid_json)
 
 
 @mock_aws
@@ -98,6 +64,40 @@ class TestGetSsmParameter(TestCase):
         # test that exception is raised for bad SSM parameter path
         with pytest.raises(Exception):
             resp = get_ssm_parameter("blah")
+
+
+def test_verify_event():
+    good_event = events["valid_sqs_msg_body"]
+    bad_event = events["invalid_event"]
+
+    assert verify_event(good_event) is None
+
+    # if an invalid SQS event is passed to the function, it should raise an error
+    with pytest.raises(Exception):
+        verify_event(bad_event)
+
+
+def test_verify_sqs_record():
+    good_event = events["valid_sqs_msg_body"]
+    bad_event = events["invalid_sqs_msg_body"]
+
+    for record in good_event["Records"]:
+        assert verify_sqs_record(record) is None
+
+    # if an invalid SQS record is passed to the function, it should raise an error
+    with pytest.raises(Exception):
+        verify_sqs_record(bad_event)
+
+
+def test_is_valid_json():
+    valid_json = '{"name": "James Bond"}'
+    invalid_json = "blah, blah, blah"
+
+    assert is_valid_json(valid_json) is None
+
+    # if an env var that is not set is passed to the function, it should raise an error
+    with pytest.raises(Exception):
+        is_valid_json(invalid_json)
 
 
 def test_process_message():

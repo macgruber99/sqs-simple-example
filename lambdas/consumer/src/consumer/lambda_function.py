@@ -11,34 +11,6 @@ from aws_lambda_powertools import Logger
 from consumer.config import config
 
 
-def verify_event(event):
-    """
-    Verify the event received has the required keys.
-
-    :event (dict): The dictionary containing the event.
-    :return (None): Default 'None' returned if event has required keys.
-    """
-
-    if not (
-        isinstance(event, dict)
-        and "Records" in event
-        and isinstance(event["Records"], list)
-    ):
-        raise ValueError("malformed event")
-
-
-def verify_sqs_record(record):
-    """
-    Verify the SQS record has the required keys.
-
-    :msg (dict): The dictionary containing the SQS record.
-    :return (None): Default 'None' returned if SQS record has required keys.
-    """
-
-    if not (isinstance(record, dict) and "messageId" in record and "body" in record):
-        raise ValueError("malformed record")
-
-
 def read_env_var(env_var_name):
     """
     Returns the value of a given environment variable name.
@@ -67,6 +39,34 @@ def get_ssm_parameter(param_name):
     response = client.get_parameter(Name=param_name)
 
     return response["Parameter"]["Value"]
+
+
+def verify_event(event):
+    """
+    Verify the event received has the required keys.
+
+    :event (dict): The dictionary containing the event.
+    :return (None): Default 'None' returned if event has required keys.
+    """
+
+    if not (
+        isinstance(event, dict)
+        and "Records" in event
+        and isinstance(event["Records"], list)
+    ):
+        raise ValueError("malformed event")
+
+
+def verify_sqs_record(record):
+    """
+    Verify the SQS record has the required keys.
+
+    :msg (dict): The dictionary containing the SQS record.
+    :return (None): Default 'None' returned if SQS record has required keys.
+    """
+
+    if not (isinstance(record, dict) and "messageId" in record and "body" in record):
+        raise ValueError("malformed record")
 
 
 def is_valid_json(json_string):
@@ -146,9 +146,6 @@ def lambda_handler(event, context):
         logger.exception(
             f'The {config["bucket_ssm_param_path_env_var_name"]} not set: {e}'
         )
-        raise
-    except KeyError as e:
-        logger.exception(f"Environment variable SSM_PARAM_BUCKET not set: {e}")
         raise
     except Exception as e:
         logger.exception(
