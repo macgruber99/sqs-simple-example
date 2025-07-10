@@ -142,14 +142,14 @@ def lambda_handler(event, context):
         ssm_param_path_bucket = read_env_var(
             config["bucket_ssm_param_path_env_var_name"]
         )
-    except ValueError as e:
+    except ValueError:
         logger.exception(
-            f'The {config["bucket_ssm_param_path_env_var_name"]} not set: {e}'
+            f'Environment variable {config["bucket_ssm_param_path_env_var_name"]} not set.'
         )
         raise
-    except Exception as e:
+    except Exception:
         logger.exception(
-            f'Error reading environment variable {config["bucket_ssm_param_path_env_var_name"]}: {e}'
+            f'Could not read environment variable {config["bucket_ssm_param_path_env_var_name"]}.'
         )
         raise
 
@@ -157,18 +157,18 @@ def lambda_handler(event, context):
     try:
         logger.info("Fetching S3 bucket name from SSM Parameter Store.")
         bucket_name = get_ssm_parameter(os.environ.get("SSM_PARAM_BUCKET"))
-    except Exception as e:
-        logger.exception(f"Error fetching parameter {ssm_param_path_bucket}: {e}")
+    except Exception:
+        logger.exception(f"Error fetching parameter '{ssm_param_path_bucket}'.")
         raise
 
     # verify event dict has required keys
     try:
         verify_event(event)
-    except ValueError as e:
-        logger.exception(f"Malformed event: {e}")
+    except ValueError:
+        logger.exception("Malformed event.")
         raise
-    except Exception as e:
-        logger.exception(f"Error verifying the event: {e}")
+    except Exception:
+        logger.exception("Error occurred while verifying the event.")
         raise
 
     for record in event.get("Records", []):
@@ -182,8 +182,8 @@ def lambda_handler(event, context):
         except ValueError:
             logger.error(f"Malformed SQS record: {record}")
             raise
-        except Exception as e:
-            logger.exception(f"Error verifying SQS record: {e}")
+        except Exception:
+            logger.exception("Error verifying SQS record.")
             raise
 
         # make sure the body of the SQS record is valid JSON
@@ -194,11 +194,11 @@ def lambda_handler(event, context):
                 f"Invalid JSON in record with messageId '{record['messageId']}'."
             )
             raise
-        except KeyError as e:
-            logger.error(f"The SQS record does not contain a 'body' key: {e}")
+        except KeyError:
+            logger.exception("The SQS record does not contain a 'body' key")
             raise
-        except Exception as e:
-            logger.error(f"Error validating SQS message body JSON: {e}")
+        except Exception:
+            logger.exception("Error validating SQS message body JSON")
             raise
 
         # process the record
@@ -207,11 +207,11 @@ def lambda_handler(event, context):
             message = process_message(record["body"])
         except KeyError:
             logger.error(
-                f"Message received from SQS did not contain 'text' field: {record['body']}"
+                f"Message received from SQS did not contain JSON with 'text' field: {record['body']}"
             )
             raise
-        except Exception as e:
-            logger.exception(f"Error processing record: {e}")
+        except Exception:
+            logger.exception("Error processing record.")
             raise
 
         try:
@@ -229,8 +229,10 @@ def lambda_handler(event, context):
                 f"{record['messageId']}.txt",
                 message,
             )
-        except Exception as e:
-            logger.exception(f"Error writing to S3 bucket '{bucket_name}': {e}")
+        except Exception:
+            logger.exception(
+                f"Error occurred while writing to S3 bucket '{bucket_name}'."
+            )
             raise
 
         processed_records += 1
