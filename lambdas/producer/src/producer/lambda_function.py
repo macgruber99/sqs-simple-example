@@ -1,6 +1,5 @@
 # Python Standard Library imports
 import json
-import os
 
 from urllib.parse import unquote_plus
 
@@ -14,36 +13,65 @@ from aws_lambda_powertools import Logger
 from producer.config import config
 
 
-def read_env_var(env_var_name):
+def get_ssm_params(path, region_name="us-west-2", recursive=True, with_decryption=True):
     """
-    Returns the value of a given environment variable name.
+    Retrieves all parameters under a given path from AWS SSM Parameter Store.
 
-    :env_var_name (str): The name of the environment variable to read.
-    :return (str): The value of the environment variable.
+
+    :param path (str): The hierarchy for the parameter. Hierarchies start with a forward slash (/).
+    :param region_name (str, optional): The AWS region to connect to. Defaults to 'us-west-2'.
+    :param recursive (bool, optional): Whether to retrieve parameters recursively under the path. Defaults to True.
+    :param with_decryption (bool, optional): Whether to decrypt SecureString parameters. Defaults to True.
+    :return (dict): A dictionary where keys are parameter names (relative to the path) and values are parameter values.
     """
+    ssm_client = boto3.client("ssm", region_name=region_name)
+    parameters = {}
+    next_token = None
 
-    env_var_value = os.environ.get(env_var_name)
+    while True:
+        # Build the request arguments
+        kwargs = {
+            "Path": path,
+            "Recursive": recursive,
+            "WithDecryption": with_decryption,
+            "MaxResults": 10,  # Can adjust MaxResults as needed, but AWS imposes a limit
+        }
+        if next_token:
+            kwargs["NextToken"] = next_token
 
-    if env_var_value is None:
-        raise ValueError("Environment variable not set.")
+        response = ssm_client.get_parameters_by_path(**kwargs)
+
+        # Process the retrieved parameters
+        for parameter in response.get("Parameters", []):
+            name = parameter["Name"]
+            value = parameter["Value"]
+            # Remove the path prefix for cleaner parameter names in the result
+            if name.startswith(path):
+                relative_name = name[len(path) :].lstrip("/")
+                parameters[relative_name] = value
+
+        next_token = response.get("NextToken")
+        if not next_token:
+            break
+
+    if not parameters:
+        raise ValueError(f"No parameters found under path '{path}'.")
     else:
-        return env_var_value
+        return parameters
 
 
-def get_ssm_parameter(param_name):
+def verify_ssm_parameters(params, reqd_params):
     """
-    Fetches a parameter value from AWS SSM Parameter Store.
+    Verify required parameters were retrieved from SSM Parameter Store.
 
-    :param parameter_name (str): The name of the parameter to fetch.
-    :return (str): The value of the parameter.
+    :param params (dict) The parameters retrieved from SSM Parameter Store.
+    :param reqd_params (list) The parameters that are needed for this script to execute.
+    :return (None): Default 'None' returned if all required parameters exist.
     """
 
-    ssm = boto3.client("ssm")
-    response = ssm.get_parameter(
-        Name=param_name,
-    )
-
-    return response["Parameter"]["Value"]
+    for param in reqd_params:
+        if param not in params.keys():
+            raise ValueError(f"Parameter '{param}' not found.")
 
 
 def is_valid_event_source(event, bucket_name):
@@ -156,38 +184,43 @@ def lambda_handler(event, context):
     # define some variables
     logger = Logger()
     max_obj_size = config["max_obj_size"]
+    ssm_param_path = config["ssm_param_path"]
 
-    # get SSM Parameter Store path for S3 bucket from env var
+    # retrieve SSM Parameter Store parameters under project path
     try:
-        logger.info(
-            "Getting SSM Parameter Store path for S3 bucket from environment variable."
-        )
-        ssm_param_path_bucket = read_env_var(
-            config["bucket_ssm_param_path_env_var_name"]
-        )
+        ssm_params = get_ssm_params(ssm_param_path)
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.exception(
+                f"Lambda function not authorized to get SSM Parameter Store parameters from path '{ssm_param_path}'."
+            )
+            raise
+        else:
+            # Handle other ClientErrors
+            logger.exception("Error reading parameters from SSM Parameter Store.")
+            raise
     except ValueError:
         logger.exception(
-            f'The {config["bucket_ssm_param_path_env_var_name"]} env var is not set.'
+            f"No parameters found in SSM Parameter Store under path '{ssm_param_path}'."
         )
         raise
     except Exception:
-        logger.exception(
-            f'Error reading environment variable {config["bucket_ssm_param_path_env_var_name"]}.'
-        )
+        logger.exception("Error reading parameters from SSM Parameter Store.")
         raise
 
-    # get S3 bucket name from SSM Parameter Store
+    # verify required SSM Parameter Store parameters were retrieved
     try:
-        logger.info("Fetching S3 bucket name from SSM Parameter Store.")
-        bucket_name = get_ssm_parameter(ssm_param_path_bucket)
-    except KeyError:
+        verify_ssm_parameters(ssm_params, config["required_ssm_params"])
+        bucket_name = ssm_params["input-bucket-name"]
+        queue_url = ssm_params["queue-url"]
+    except ValueError:
         logger.exception(
-            f"Parameter '{bucket_name}' does not exist in SSM Parameter Store."
+            f"Required SSM Parameter Store parameter not found under path '{ssm_param_path}'."
         )
         raise
     except Exception:
         logger.exception(
-            f"Problem fetching parameter '{bucket_name}' from SSM Parameter Store."
+            "Error occurred while verifying parameters retrieved from SSM Parameter Store."
         )
         raise
 
@@ -246,6 +279,11 @@ def lambda_handler(event, context):
         logger.exception("No S3 object key found in event.")
         raise
     except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.exception(
+                f"Lambda function not authorized to write to read from S3 bucket '{bucket_name}'."
+            )
+            raise
         if e.response["Error"]["Code"] == "NoSuchKey":
             logger.exception(
                 f"S3 object key '{obj_key}' not found in bucket '{bucket_name}'."
@@ -267,42 +305,20 @@ def lambda_handler(event, context):
         logger.exception("Error occurred while validating S3 object content is JSON.")
         raise
 
-    # get SSM Parameter Store path for SQS queue URL from env var
-    try:
-        logger.info(
-            "Getting SSM Parameter Store path for SQS queue URL from environment variable."
-        )
-        ssm_param_path_queue = read_env_var(config["queue_ssm_param_path_env_var_name"])
-    except ValueError:
-        logger.exception(
-            f'The {config["queue_ssm_param_path_env_var_name"]} env var is not set.'
-        )
-        raise
-    except Exception:
-        logger.exception(
-            f'Error reading environment variable {config["queue_ssm_param_path_env_var_name"]}.'
-        )
-        raise
-
-    # get the SQS queue URL from SSM Parameter Store
-    try:
-        logger.info("Getting SQS queue URL from SSM Parameter Store.")
-        queue_url = get_ssm_parameter(ssm_param_path_queue)
-    except KeyError:
-        logger.exception(
-            f"Parameter '{queue_url}' does not exist in SSM Parameter Store."
-        )
-        raise
-    except Exception:
-        logger.exception(
-            f"Problem fetching parameter '{queue_url}' from SSM Parameter Store."
-        )
-        raise
-
     # send a message to the SQS queue
     try:
         logger.info(f"Sending message to SQS queue '{queue_url}'.")
         send_message_to_sqs(obj_value, queue_url)
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.exception(
+                f"Lambda function not authorized to write to SQS queue '{queue_url}'."
+            )
+            raise
+        else:
+            # Handle other ClientErrors
+            logger.exception(f"Error writing to SQS queue '{queue_url}'.")
+            raise
     except Exception:
         logger.exception(
             f"Error occurred while sending message to SQS queue '{queue_url}'."
