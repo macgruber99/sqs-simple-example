@@ -10,11 +10,12 @@ import boto3
 from moto import mock_aws
 
 # local imports
+from src.consumer.lambda_function import get_ssm_params
+from src.consumer.lambda_function import verify_ssm_parameters
 from src.consumer.lambda_function import verify_event
-from src.consumer.lambda_function import is_valid_json
 from src.consumer.lambda_function import verify_sqs_record
-from src.consumer.lambda_function import read_env_var
-from src.consumer.lambda_function import get_ssm_parameter
+from src.consumer.lambda_function import verify_sqs_source
+from src.consumer.lambda_function import is_valid_json
 from src.consumer.lambda_function import process_message
 from src.consumer.lambda_function import check_for_err_str
 from src.consumer.lambda_function import write_obj_to_s3
@@ -25,6 +26,7 @@ from tests.events import events
 @pytest.fixture(scope="function")
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
+
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"  # nosec
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"  # nosec
     os.environ["AWS_SECURITY_TOKEN"] = "testing"  # nosec
@@ -32,109 +34,163 @@ def aws_credentials():
     os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
-@pytest.mark.usefixtures("aws_credentials")
-def test_read_env_var():
-    # use AWS_DEFAULT_REGION env var set in aws_credentials() for testing
-    assert read_env_var("AWS_DEFAULT_REGION") == "us-east-1"
+@pytest.fixture
+def shared_data():
+    """A fixture providing shared data."""
 
-    # if an env var that is not set is passed to the function, it should raise an error
-    with pytest.raises(Exception):
-        read_env_var("my_non_existent_env_var")
+    return {
+        "param_path": "/path/to/parameter",
+        "param_name": "my-test-parameter",
+        "param_value": "pizza",
+    }
 
 
-@mock_aws
-class TestGetSsmParameter(TestCase):
-    def setUp(self):
-        self.param_path = "/path/to/my-test-parameter"
-        self.param_value = "pizza"
-        ssm = boto3.client("ssm")
+@pytest.fixture(scope="function")
+def mocked_ssm(shared_data):
+    """Mocked S3 client."""
 
-        ssm.put_parameter(
-            Name=self.param_path,
+    with mock_aws():
+        client = boto3.client("ssm", region_name="us-west-2")
+        client.put_parameter(
+            Name=f"{shared_data['param_path']}/{shared_data['param_name']}",
             Description="My test parameter",
-            Value=self.param_value,
+            Value=shared_data["param_value"],
             Type="String",
         )
+        yield client  # All boto3 SSM calls within tests will be mocked
 
-    def test_get_ssm_parameter(self):
-        # test a valid response
-        resp = get_ssm_parameter(self.param_path)
-        assert resp == self.param_value
 
-        # test that exception is raised for bad SSM parameter path
-        with pytest.raises(Exception):
-            resp = get_ssm_parameter("blah")
+def test_get_ssm_params(mocked_ssm, shared_data):
+    """Test the project get_ssm_params() function."""
+
+    # The boto3 client instantiated in the project function interacts
+    # with the mocked SSM service
+    results = get_ssm_params(shared_data["param_path"])
+
+    assert shared_data["param_name"] in results.keys()
+    assert shared_data["param_value"] == results[shared_data["param_name"]]
+
+    # Test that exception is raised for bad SSM parameter path
+    with pytest.raises(Exception):
+        get_ssm_params("/my/invalid/path")
+
+
+def test_verify_ssm_parameters(mocked_ssm, shared_data):
+    """Test the project verify_ssm_parameters() function."""
+
+    required_params = [shared_data["param_name"]]
+    results = get_ssm_params(shared_data["param_path"])
+    bad_results = {"blah": "blah, blah, blah"}
+
+    assert verify_ssm_parameters(results, required_params) is None
+
+    # If a required parameter is missing, an exception should be raised
+    with pytest.raises(Exception):
+        verify_ssm_parameters(bad_results, required_params)
 
 
 def test_verify_event():
-    good_event = events["valid_sqs_msg_body"]
+    """Test the project verify_event() function."""
+
+    good_event = events["valid_sqs_msg"]
     bad_event = events["invalid_event"]
 
     assert verify_event(good_event) is None
 
-    # if an invalid SQS event is passed to the function, it should raise an error
+    # An invalid SQS event should raise an exception
     with pytest.raises(Exception):
         verify_event(bad_event)
 
 
 def test_verify_sqs_record():
-    good_event = events["valid_sqs_msg_body"]
-    bad_event = events["invalid_sqs_msg_body"]
+    """Test the project verify_sqs_record() function."""
+
+    good_event = events["valid_sqs_msg"]
+    bad_event = events["invalid_sqs_msg_values"]
 
     for record in good_event["Records"]:
         assert verify_sqs_record(record) is None
 
-    # if an invalid SQS record is passed to the function, it should raise an error
+    # An invalid SQS record should raise an exception
     with pytest.raises(Exception):
         verify_sqs_record(bad_event)
 
 
+def test_verify_sqs_source():
+    """Test the project verify_sqs_source() function."""
+
+    good_event = events["valid_sqs_msg"]
+    bad_event = events["invalid_sqs_msg_values"]
+
+    for record in good_event["Records"]:
+        assert (
+            verify_sqs_source(record, "arn:aws:sqs:us-east-2:123456789012:my-queue")
+            is None
+        )
+
+    # An invalid SQS source should raise an exception
+    with pytest.raises(Exception):
+        verify_sqs_source(bad_event, "arn:aws:sqs:us-east-2:123456789012:my-queue")
+
+
 def test_is_valid_json():
+    """Test the project is_valid_json() function."""
+
     valid_json = '{"name": "James Bond"}'
     invalid_json = "blah, blah, blah"
 
     assert is_valid_json(valid_json) is None
 
-    # if an env var that is not set is passed to the function, it should raise an error
+    # Invalid JSON should raise an exception
     with pytest.raises(Exception):
         is_valid_json(invalid_json)
 
 
 def test_process_message():
+    """Test the project process_message() function."""
+
     # The SQS event is JSON containing a number of records that correspond to
     # SQS messages.  These records should have a 'body' key that contains the
     # text of the SQS message.  The text of the SQS message is also JSON.
-    good_json_str = events["valid_sqs_msg_body"]["Records"][0]["body"]
-    bad_json_str = events["invalid_sqs_msg_body"]["Records"][0]["body"]
+    good_json_str = events["valid_sqs_msg"]["Records"][0]["body"]
+    bad_json_str = events["invalid_sqs_msg_values"]["Records"][0]["body"]
 
     assert process_message(good_json_str) is not None
 
-    # test that exception is raised for bad SSM parameter path
+    # An SQS message JSON that does not contain a 'text' key should raise an exception
     with pytest.raises(Exception):
         process_message(bad_json_str)
 
 
 def test_check_for_err_str():
+    """Test the project check_for_err_str() function."""
+
     assert check_for_err_str("e pluribus unum") is None
 
-    # if non-JSON is passed to the function, it should raise an error
+    # An exception should be raised if the special error string was found
     with pytest.raises(Exception):
         check_for_err_str(config["special_error_string"])
 
 
 @mock_aws
 @pytest.mark.usefixtures("aws_credentials")
-class WriteObjToS3(TestCase):
+class TestWriteObjToS3(TestCase):
+    """Test the project write_obj_to_s3() function."""
+
     def setUp(self):
+        """Set up to test the project write_obj_to_s3() function."""
+
         self.bucket_name = "my-test-bucket"
         # create S3 bucket and object
         s3 = boto3.client("s3")
         s3.create_bucket(Bucket=self.bucket_name)
 
     def test_write_obj_to_s3(self):
+        """Test the project write_obj_to_s3() function."""
+
         # test a valid response
         resp = write_obj_to_s3(self.bucket_name, "blah", "whatever")
-        assert resp is None
+        assert isinstance(resp, dict)
 
         # test writing to a non-existent S3 bucket
         with pytest.raises(Exception):
