@@ -17,47 +17,64 @@ tasks:
       - test -f .git/hooks/pre-commit
     silent: true
 
-  pre-commit:
+  pre-commit-run:
     desc: Execute pre-commit
     summary: Execute all pre-commit hooks.
-    deps:
-      - install-precommit
+    deps: [install-precommit]
+    aliases: [pre-commit]
     cmds:
       - pre-commit run -a
 
   unit-test:
     desc: Run unit tests
     summary: Run unit tests for a Lambda function.
+    aliases: [test]
     cmds:
       - poetry run pytest
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
-  build:
+  build-lambdas:
     desc: Build a Lambda packages
     summary: Build a ZIP archive package for a Lambda function.
+    aliases: [build]
     cmds:
       - poetry build-lambda
     dir: '{{.USER_WORKING_DIR}}' # must 'cd' to Lambda dir first
 
-  tf-init:
+  create-backend-config:
+    desc: Create S3 backend config
+    summary: Create the S3 backend configuration file.
+    cmds:
+      - echo "bucket = \"{{.BACKEND_BUCKET}}\"" > {{.BACKEND_CONFIG_FILE}}
+    vars:
+      SSM_PARAM_PATH: /core-infra/terraform-state-bucket-name
+      BACKEND_BUCKET:
+        sh: aws ssm get-parameter --name {{.SSM_PARAM_PATH}} | jq -r '.Parameter.Value'
+      BACKEND_CONFIG_FILE: "{{.TASKFILE_DIR}}/terraform/backend.config"
+    status:
+      - test -f {{.BACKEND_CONFIG_FILE}}
+
+  terraform-initialization:
     desc: Initialize Terraform code
     summary: Executes a 'terraform init' to initializes the Terraform working directory.
+    aliases: [tf-init]
+    deps: [create-backend-config]
     cmds:
       - terraform init -backend-config="./backend.config"
     dir: terraform/
 
-  tf-plan:
-    deps:
-      - build
+  terraform-plan:
     desc: Show planned deployment
     summary: Executes a 'terraform plan' to show what resources would be deployed.
+    aliases: [tf-plan]
     cmds:
       - terraform plan
     dir: terraform/
 
-  deploy:
+  terraform-apply:
     desc: Deploy resources
     summary: Applies Terraform code to deploy Lambdas and other resources to AWS.
+    aliases: [tf-apply, deploy]
     cmds:
       - terraform apply -auto-approve
     dir: terraform/
