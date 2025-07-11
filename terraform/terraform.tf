@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "***REMOVED***"
+    bucket       = ""
     key          = "sqs-simple-example/terraform.tfstate"
     region       = "us-west-2"
     encrypt      = true
