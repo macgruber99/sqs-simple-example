@@ -1,7 +1,7 @@
 import json
 
-# valid SQS event JSON with valid message body
-valid_sqs_msg_body = json.loads(
+# valid SQS event JSON with all keys having valid values
+valid_sqs_msg = json.loads(
     """
 {
     "Records": [
@@ -33,8 +33,8 @@ valid_sqs_msg_body = json.loads(
 """
 )
 
-# valid SQS event JSON with invalid message body
-invalid_sqs_msg_body = json.loads(
+# invalid SQS event JSON, some keys contain invalid values
+invalid_sqs_msg_values = json.loads(
     """
 {
     "Records": [
@@ -58,7 +58,7 @@ invalid_sqs_msg_body = json.loads(
             },
             "md5OfBody": "e4e68fb7bd0e697a0ae8f1bb342846b3",
             "eventSource": "aws:sqs",
-            "eventSourceARN": "arn:aws:sqs:us-east-2:123456789012:my-queue",
+            "eventSourceARN": "arn:aws:sqs:us-east-2:123456789012:some-invalid-queue",
             "awsRegion": "us-east-2"
         },
         {
@@ -73,7 +73,7 @@ invalid_sqs_msg_body = json.loads(
             },
             "messageAttributes": {},
             "md5OfBody": "e4e68fb7bd0e697a0ae8f1bb342846b3",
-            "eventSource": "aws:sqs",
+            "eventSource": "aws:kinesis",
             "eventSourceARN": "arn:aws:sqs:us-east-2:123456789012:my-queue",
             "awsRegion": "us-east-2"
         }
@@ -92,7 +92,7 @@ invalid_event = json.loads(
 )
 
 events = {
-    "valid_sqs_msg_body": valid_sqs_msg_body,
-    "invalid_sqs_msg_body": invalid_sqs_msg_body,
+    "valid_sqs_msg": valid_sqs_msg,
+    "invalid_sqs_msg_values": invalid_sqs_msg_values,
     "invalid_event": invalid_event,
 }
