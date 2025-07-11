@@ -4,5 +4,7 @@
 terraform/builds
 terraform/backend.config
 
+cicd/backend.config
+
 package.zip
 __pycache__/

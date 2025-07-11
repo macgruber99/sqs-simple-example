@@ -45,12 +45,13 @@ tasks:
     desc: Create S3 backend config
     summary: Create the S3 backend configuration file.
     cmds:
-      - echo "bucket = \"{{.BACKEND_BUCKET}}\"" > {{.BACKEND_CONFIG_FILE}}
+      - echo "bucket = \"{{.BACKEND_BUCKET}}\"" > "{{.TASKFILE_DIR}}/terraform/{{.BACKEND_CONFIG_FILE}}"
+      - echo "bucket = \"{{.BACKEND_BUCKET}}\"" > "{{.TASKFILE_DIR}}/cicd/{{.BACKEND_CONFIG_FILE}}"
     vars:
       SSM_PARAM_PATH: /core-infra/terraform-state-bucket-name
       BACKEND_BUCKET:
         sh: aws ssm get-parameter --name {{.SSM_PARAM_PATH}} | jq -r '.Parameter.Value'
-      BACKEND_CONFIG_FILE: "{{.TASKFILE_DIR}}/terraform/backend.config"
+      BACKEND_CONFIG_FILE: "backend.config"
     status:
       - test -f {{.BACKEND_CONFIG_FILE}}
 
