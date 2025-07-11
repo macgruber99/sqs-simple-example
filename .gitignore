@@ -2,6 +2,7 @@
 **/terraform.tfstate
 **/terraform.tfstate.backup
 terraform/builds
+terraform/backend.config
 
 package.zip
 __pycache__/

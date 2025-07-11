@@ -43,7 +43,7 @@ tasks:
     desc: Initialize Terraform code
     summary: Executes a 'terraform init' to initializes the Terraform working directory.
     cmds:
-      - terraform init
+      - terraform init -backend-config="./backend.config"
     dir: terraform/
 
   tf-plan:
