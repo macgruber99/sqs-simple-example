@@ -145,6 +145,13 @@
 		},
 		{
 			"Effect": "Allow",
+			"Action": [
+				"ssm:GetParameter"
+			],
+			"Resource": "arn:aws:ssm:${Region}:${Account}:parameter/core-infra/terraform-state-bucket-name"
+		},
+		{
+			"Effect": "Allow",
 			"Action": "sns:*",
 			"Resource": "arn:aws:sns:${Region}:${Account}:${ProjectName}-*"
 		}
