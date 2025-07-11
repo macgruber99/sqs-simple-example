@@ -1,4 +1,4 @@
 [flake8]
-extend-ignore = E501
+extend-ignore = E203, E501
 # Black uses a line length of 88 so set that here.
 max-line-length = 88

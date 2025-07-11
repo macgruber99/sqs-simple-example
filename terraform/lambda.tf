@@ -12,14 +12,20 @@ module "lambda_sqs_producer" {
   local_existing_package = "../lambdas/producer/package.zip"
 
   policy_statements = {
-    sms_parameter_store_access = {
+    ssm_parameter_store_access = {
       actions = [
         "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
       ]
 
       resources = [
-        aws_ssm_parameter.queue_url.arn,
-        aws_ssm_parameter.bucket_name["input"].arn
+        format(
+          "arn:aws:ssm:%s:%s:parameter/%s*",
+          var.aws_region,
+          data.aws_caller_identity.current.account_id,
+          var.project_name
+        )
       ]
     }
 
@@ -48,13 +54,6 @@ module "lambda_sqs_producer" {
 
   attach_policy_statements = true
 
-  environment_variables = {
-    # The AWS resource identifiers themselves could be put in env vars, but
-    # here SSM parameters are used and parameter paths are put in env vars.
-    SSM_PARAM_QUEUE  = aws_ssm_parameter.queue_url.name
-    SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["input"].name
-  }
-
   cloudwatch_logs_retention_in_days = var.lambda_logs_retention_days
 
   tags = local.tags
@@ -82,13 +81,20 @@ module "lambda_sqs_consumer" {
   local_existing_package = "../lambdas/consumer/package.zip"
 
   policy_statements = {
-    sms_parameter_store_access = {
+    ssm_parameter_store_access = {
       actions = [
         "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
       ]
 
       resources = [
-        aws_ssm_parameter.bucket_name["output"].arn
+        format(
+          "arn:aws:ssm:%s:%s:parameter/%s*",
+          var.aws_region,
+          data.aws_caller_identity.current.account_id,
+          var.project_name
+        )
       ]
     }
 
@@ -132,12 +138,6 @@ module "lambda_sqs_consumer" {
         metrics = ["EventCount"]
       }
     }
-  }
-
-  environment_variables = {
-    # The AWS resource identifier itself could be put in the env var, but here
-    # an SSM parameter is used and the parameter path is put in the env var.
-    SSM_PARAM_BUCKET = aws_ssm_parameter.bucket_name["output"].name
   }
 
   cloudwatch_logs_retention_in_days = var.lambda_logs_retention_days
