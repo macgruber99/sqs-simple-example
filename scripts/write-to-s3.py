@@ -29,18 +29,21 @@ def main():
     Main function to write a message to an S3 bucket.
     """
 
-    # define some variables
-    sentence = lorem.sentence()  # generate random text that looks like Latin
-    timestamp = datetime.now(timezone.utc).isoformat()
-    first_word = sentence.split()[0]  # get the first word of the sentence
-    s3_obj_key = f"{first_word}-{timestamp}.json"  # create a unique file name based on the timestamp
-
-    message = {"text": sentence, "timestamp": timestamp}
-
     # parse the command line arguments
     parser = argparse.ArgumentParser(description="Write a message to an S3 bucket.")
     parser.add_argument("bucket_name", type=str, help="The name of the S3 bucket")
+    parser.add_argument("--text", type=str, help="The text to write to S3")
     args = parser.parse_args()
+
+    if args.text:
+        text = args.text
+    else:
+        text = lorem.sentence()  # generate random text that looks like Latin
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+    message = {"text": text, "timestamp": timestamp}
+    first_word = text.split()[0]  # get the first word of the sentence
+    s3_obj_key = f"{first_word}-{timestamp}.json"  # create a unique file name based on the timestamp
 
     # write the message to S3
     write_obj_to_s3(args.bucket_name, s3_obj_key, json.dumps(message))
